@@ -1,0 +1,10 @@
+comandos crear proyecto por defecto:
+ - npx create-expo-app@latest
+
+comando para proyecto esqueleto desde 0:
+ - npx create-expo-app@latest mi-proyecto --template blank
+ - dependencias web:
+    npx expo install react-dom react-native-web @expo/metro-runtime
+
+comando lanzar en android emulator:
+ - npx expo run:android
