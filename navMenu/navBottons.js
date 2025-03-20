@@ -2,77 +2,77 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 
 import HomePage from '../components/homePage';
+import Dieta from '../components/dieta/dieta';
+import Glucosa from '../components/glucosa/glucosa';
+import Perfil from '../components/perfil/perfil';
+import Calendar from '../components/calendar/calendar';
+
 const Tab = createBottomTabNavigator();
-
-const DietaScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Dieta</Text>
-  </View>
-);
-
-const CalendarScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Caalendar</Text>
-  </View>
-);
-
-
-const GlucosaScreen = () => (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Glucosa</Text>
-    </View>
-);
-
-const PerfilScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <Text>Perfil</Text>
-  </View>
-);
 
 export default function NavBottons() {
   return (
     <Tab.Navigator
-      initialRouteName='Inicio'
+      initialRouteName="Inicio"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ color, size }) => {
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: '#2F5D8C',
+          height: 70,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+          paddingTop: 5,
+          borderTopWidth: 0,
+          elevation: 10,
+        },
+        tabBarActiveTintColor: '#E0F0FF',
+        tabBarInactiveTintColor: '#B0CDE0',
+        tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
           switch (route.name) {
             case 'Inicio':
-              iconName = 'home-outline';
+              iconName = focused ? 'home' : 'home-outline';
               break;
             case 'Calendar':
-              iconName = 'calendar-outline';
+              iconName = focused ? 'calendar' : 'calendar-outline';
               break;
             case 'Dieta':
-              iconName = 'restaurant-outline';
+              iconName = focused ? 'restaurant' : 'restaurant-outline';
               break;
             case 'Glucosa':
-              iconName = 'stats-chart-outline';
+              iconName = focused ? 'stats-chart' : 'stats-chart-outline';
               break;
             case 'Perfil':
-              iconName = 'person-outline';
+              iconName = focused ? 'person' : 'person-outline';
               break;
-            default:
-              iconName = 'ellipse-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Ionicons name={iconName} size={26} color={color} />;
         },
-        tabBarActiveTintColor: '#1e90ff',
-        tabBarInactiveTintColor: 'gray',
+        tabBarLabelStyle: {
+          fontSize: 12,
+          marginBottom: 5,
+        },
       })}
     >
-    
-      <Tab.Screen name="Calendar" component={CalendarScreen} />
-      <Tab.Screen name="Dieta" component={DietaScreen} />
-      <Tab.Screen name="Inicio" component={HomePage} style={{width: 100}} />
-      <Tab.Screen name="Glucosa" component={GlucosaScreen} />
-      <Tab.Screen name="Perfil" component={PerfilScreen} />
+      <Tab.Screen name="Calendar" component={Calendar} />
+      <Tab.Screen name="Dieta" component={Dieta} />
+      <Tab.Screen name="Inicio" component={HomePage} />
+      <Tab.Screen name="Glucosa" component={Glucosa} />
+      <Tab.Screen name="Perfil" component={Perfil} />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
+});
