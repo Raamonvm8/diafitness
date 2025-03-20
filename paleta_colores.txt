@@ -1,0 +1,4 @@
+Blanco: #FFFFFF
+Azul clarito: #E0F0FF
+Azul Oscuro: #2F5D8C
+verde menta: #C7F2E6
