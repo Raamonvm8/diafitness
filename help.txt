@@ -5,6 +5,9 @@ comando para proyecto esqueleto desde 0:
  - npx create-expo-app@latest mi-proyecto --template blank
  - dependencias web:
     npx expo install react-dom react-native-web @expo/metro-runtime
+ - Instalacion expo:
+    npm install -g expo-cli
+
 
 comando lanzar en android emulator:
  - npx expo run:android
