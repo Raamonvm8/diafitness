@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: 20,
+    marginTop: 20,
     backgroundColor: '#FFFFFF',
     padding: 6,
     borderRadius: 10,
