@@ -1,41 +1,74 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { getAuth, signOut  } from 'firebase/auth';
+import { FIREBASE_DB } from '../../FirebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
+
+
 
 export default function Perfil() {
+  const [usuario, setUsuario] = useState(null);
+
+  useEffect(() => {
+    const cargarDatosUser = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      if (!user) return;
+
+      const refUsers = doc(FIREBASE_DB, 'users', user.uid);
+      const getRefDoc = await getDoc(refUsers);
+
+      if(getRefDoc.exists()){
+        setUsuario(getRefDoc.data());
+      }else {
+        console.log('No se encontraron datos del usuario.');
+      }
+      
+    };
+    cargarDatosUser();
+  }, []);
+
   return (
     <ScrollView style={styles.container}>
       
-
       <View style={styles.avatarContainer}>
         <Image
           source={require('../../assets/perfil/avatar-perfil.png')}
           style={styles.avatar}
         />
-        <Text style={styles.name}>Nombre de Usuario</Text>
-        <Text style={styles.email}>usuario@email.com</Text>
-      </View>
+        {usuario ? (
+          <>
+            <Text style={styles.name} >{usuario.nombre}</Text>
+            <Text style={styles.email} >{usuario.email}</Text>
+          </>
+        ) : (
+          <Text>Cargando datos del usuario...</Text>
+        )}
+        </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Información Personal</Text>
         <View style={styles.infoItem}>
-          <Feather name="calendar" size={20} color="#2F5D8C" />
-          <Text style={styles.infoText}>Fecha de nacimiento: 01/01/2000</Text>
+          <MaterialCommunityIcons name="dumbbell" size={22} color="#2F5D8C" />
+            <Text style={styles.infoText} >Peso: {usuario?.peso ?? ''}Kg</Text>
         </View>
         <View style={styles.infoItem}>
-          <Feather name="map-pin" size={20} color="#2F5D8C" />
-          <Text style={styles.infoText}>Ubicación: Las Palmas</Text>
+          <MaterialCommunityIcons name="human-male-height" size={22} color="#2F5D8C" />
+            <Text style={styles.infoText}>Altura: {usuario?.altura ?? ''} m </Text>
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferencias</Text>
         <View style={styles.infoItem}>
-          <Ionicons name="notifications-outline" size={20} color="#2F5D8C" />
+          <Ionicons name="notifications-outline" size={22} color="#2F5D8C" />
           <Text style={styles.infoText}>Notificaciones activadas</Text>
         </View>
         <View style={styles.infoItem}>
-          <Ionicons name="color-palette-outline" size={20} color="#2F5D8C" />
+          <Ionicons name="color-palette-outline" size={22} color="#2F5D8C" />
           <Text style={styles.infoText}>Tema: Claro</Text>
         </View>
       </View>
