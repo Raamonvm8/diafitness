@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "378347485199",
+    "project_id": "diafitness-8a56c",
+    "storage_bucket": "diafitness-8a56c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:378347485199:android:e0b72c0e5c1a6bca91cb7a",
+        "android_client_info": {
+          "package_name": "com.anonymous.diafitness"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjVONUQIDjgHUjF7KsrzAX1Zj0NntVBfw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
