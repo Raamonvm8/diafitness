@@ -6,12 +6,30 @@ import Fondo from "../fondo";
 import moment from "moment";
 
 
+
+
 export default function Glucosa() {
   const [mostrarDatos, setMostrarDatos] = useState(true); 
   const [filtro, setFiltro] = useState("dia");
   const [diaMostrado, setDiaMostrado] = useState("");
+  const [semanaMostrada, setSemanaMostrada] = useState(moment().startOf("isoWeek"));
+  const [esSemana, setSemana] = useState(false);
   const [esDia, setDia] = useState(false);
 
+
+  const cambiarSemanaAnterior = () => {
+    setSemanaMostrada((prev) => moment(prev).subtract(1, "week"));
+  };
+  
+  const cambiarSemanaSiguiente = () => {
+    const ultimaFecha = obtenerUltimaFecha();
+    const nuevaSemana = moment(semanaMostrada).add(1, "week");
+  
+    // Asegurar que no pase del mes actual
+    if (nuevaSemana.month() === ultimaFecha.month()) {
+      setSemanaMostrada(nuevaSemana);
+    }
+  };
   
   const datosGlucosa = [
     { fecha: "12/03/2025", hora: "10:00", nivel: 100, notas: "recién levantado" },
@@ -35,6 +53,12 @@ export default function Glucosa() {
     } else {
       setDia(false);
     }
+    if (filtro === "semana" && ultimaFechaRegistrada) {
+      setSemanaMostrada(moment(ultimaFechaRegistrada, "DD/MM/YYYY"));
+      setSemana(true);
+    } else {
+      setSemana(false);
+    }
   }, [filtro]);
 
   const procesarDatos = () => {
@@ -42,7 +66,7 @@ export default function Glucosa() {
     const fechaActual = moment();
 
     if (filtro === "dia") {
-      const fechaSeleccionada = moment(diaMostrado, "dddd, DD [de] MMMM");  // Fecha seleccionada en formato día
+      const fechaSeleccionada = moment(diaMostrado, "dddd, DD [de] MMMM");
 
     const datosDelDia = datosGlucosa.filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(fechaSeleccionada, "day"));
 
@@ -124,37 +148,121 @@ export default function Glucosa() {
     }
   };
 
-  const cambiarDiaAnterior = () => {
-    const nuevaFecha = moment(diaMostrado, "dddd, DD [de] MMMM").subtract(1, 'days');
-    setDiaMostrado(nuevaFecha.format("dddd, DD [de] MMMM"));
+  const cambiarFechaAnterior = () => {
+    if (filtro === "dia") {
+      const nuevaFecha = moment(diaMostrado, "dddd, DD [de] MMMM").subtract(1, "days");
+      setDiaMostrado(nuevaFecha.format("dddd, DD [de] MMMM"));
+    } else if (filtro === "semana") {
+      cambiarSemanaAnterior();
+    }
   };
   
-  const cambiarDiaSiguiente = () => {
-    const nuevaFecha = moment(diaMostrado, "dddd, DD [de] MMMM").add(1, 'days');
-    setDiaMostrado(nuevaFecha.format("dddd, DD [de] MMMM"));
+  const cambiarFechaSiguiente = () => {
+    if (filtro === "dia") {
+      const nuevaFecha = moment(diaMostrado, "dddd, DD [de] MMMM").add(1, "days");
+      setDiaMostrado(nuevaFecha.format("dddd, DD [de] MMMM"));
+    } else if (filtro === "semana") {
+      cambiarSemanaSiguiente();
+    }
   };
+  
   
 
   return (
     <Fondo>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.main}>
-          <TouchableOpacity 
-            style={[styles.botonMes, { backgroundColor: mostrarDatos ? "#C7F2E6" : "#2F5D8C", width: mostrarDatos ? "60%" : "100%" }]} 
+          {/* Botón para mostrar/ocultar datos */}
+          {/*<TouchableOpacity
+            style={[
+              styles.botonMes,
+              {
+                backgroundColor: mostrarDatos ? "#C7F2E6" : "#2F5D8C",
+                width: mostrarDatos ? "60%" : "100%",
+              },
+            ]}
             onPress={() => setMostrarDatos(!mostrarDatos)}
           >
-            <Text style={[styles.textoBoton, { color: mostrarDatos ? "#2F5D8C" : "#FFFFFF" }]}>
+            <Text
+              style={[
+                styles.textoBoton,
+                { color: mostrarDatos ? "#2F5D8C" : "#FFFFFF" },
+              ]}
+            >
               Marzo 2025 {mostrarDatos ? "👆" : "👇"}
-            </Text>
-          </TouchableOpacity>
-
+            </Text> 
+          </TouchableOpacity>*/ }
+  
           {mostrarDatos && (
             <>
-              <TouchableOpacity style={styles.botonMedir}>
-                <Text style={styles.textoBoton}>+ Medir</Text>
-              </TouchableOpacity>
+              
 
-              <View style={styles.tabla}>
+              <View style={styles.fechaNavigationContainer}>
+                <View style={styles.fechaNavigation}>
+                  <TouchableOpacity onPress={cambiarFechaAnterior} style={styles.arrowButton}>
+                    <Text style={styles.arrowText}>←</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.textoFiltro, { marginTop: 10, marginBottom: -10 }]}>
+                    {filtro === "dia" ? diaMostrado : filtro === "semana" ? `Semana del ${semanaMostrada.format("DD/MM/YYYY")}` : ""}
+                  </Text>
+                  <TouchableOpacity onPress={cambiarFechaSiguiente} style={styles.arrowButton}>
+                    <Text style={styles.arrowText}>→</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.botonMedir}>
+                  <Text style={styles.textoBoton}>+ Medir</Text>
+                </TouchableOpacity>
+              </View>
+
+      
+  
+              {/* Gráfico */}
+              {procesarDatos && (
+                <LineChart
+                  data={procesarDatos()}
+                  width={Dimensions.get("window").width - 40}
+                  height={230}
+                  chartConfig={{
+                    backgroundColor: "#FFFFFF",
+                    backgroundGradientFrom: "#E0F0FF",
+                    backgroundGradientTo: "#C7F2E6",
+                    decimalPlaces: 1,
+                    propsForLabels: {
+                      fontSize: 12,
+                      fontWeight: "bold",
+                    },
+                    color: (opacity = 1) => `rgba(47, 93, 140, ${opacity})`,
+                  }}
+                  bezier
+                  style={styles.grafica}
+                />
+              )}
+            </>
+          )}
+          <View style={styles.filtrosContainer}>
+            {["dia", "semana", "mes"].map((tipo) => (
+              <TouchableOpacity
+                key={tipo}
+                onPress={() => setFiltro(tipo)}
+                style={[
+                  styles.botonFiltro,
+                  filtro === tipo && styles.botonFiltroActivo,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.textoFiltro,
+                    { color: filtro === tipo ? "#FFFFFF" : "#2F5D8C" },
+                  ]}
+                >
+                  {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={{ height: 1, backgroundColor: "#ffffff", marginVertical: 10, zIndex: 1 }} />
+
+          <View style={styles.tabla}>
                 <View style={styles.filaHeader}>
                   <Text style={styles.celdaHeader}>Día</Text>
                   <Text style={styles.celdaHeader}>Hora</Text>
@@ -162,7 +270,7 @@ export default function Glucosa() {
                   <Text style={styles.celdaHeader}>Notas</Text>
                 </View>
                 <ScrollView style={styles.scrollTabla} nestedScrollEnabled={true}>
-                  {datosGlucosa.map((item, index) => (
+                  {datosGlucosa?.map((item, index) => (
                     <View key={index} style={styles.fila}>
                       <Text style={styles.celda}>{item.fecha}</Text>
                       <Text style={styles.celda}>{item.hora}</Text>
@@ -172,60 +280,19 @@ export default function Glucosa() {
                   ))}
                 </ScrollView>
               </View>
-              
-              <View style={styles.filtrosContainer}>
-                <TouchableOpacity onPress={() => setFiltro("dia")} style={[styles.botonFiltro, filtro === "dia" && styles.botonFiltroActivo]}>
-                  <Text style={[styles.textoFiltro, {color: filtro==='dia' ? "#FFFFFF" : "#2F5D8C" } ]}>Día</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setFiltro("semana")} style={[styles.botonFiltro, filtro === "semana" && styles.botonFiltroActivo]}>
-                  <Text style={[styles.textoFiltro, {color: filtro==='semana' ? "#FFFFFF" : "#2F5D8C" } ]}>Semana</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setFiltro("mes")} style={[styles.botonFiltro, filtro === "mes" && styles.botonFiltroActivo]}>
-                  <Text style={[styles.textoFiltro, {color: filtro==='mes' ? "#FFFFFF" : "#2F5D8C" } ]}>Mes</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.fechaNavigation}>
-                <TouchableOpacity onPress={cambiarDiaAnterior} style={styles.arrowButton}>
-                  <Text style={styles.arrowText}>←</Text>
-                </TouchableOpacity>
-                <Text style={[styles.textoFiltro, {marginTop: 10, marginBottom: -10}]}>{esDia ? diaMostrado : ""}</Text>
-                <TouchableOpacity onPress={cambiarDiaSiguiente} style={styles.arrowButton}>
-                  <Text style={styles.arrowText}>→</Text>
-                </TouchableOpacity>
-              </View>             
-              <LineChart
-                data={procesarDatos()}
-                width={Dimensions.get("window").width - 40}
-                height={230}
-                chartConfig={{
-                  backgroundColor: "#FFFFFF",
-                  backgroundGradientFrom: "#E0F0FF",
-                  backgroundGradientTo: "#C7F2E6",
-                  decimalPlaces: 1,
-                  propsForLabels: { // Personaliza las etiquetas de los ejes
-                    fontSize: 12,
-                    fontWeight: "bold",
-                  },
-                  color: (opacity = 1) => `rgba(47, 93, 140, ${opacity})`,
-                }}
-                bezier
-                style={styles.grafica}
-              />
-            </>
-          )}
-
-          {/* Otros meses */}
+  
+          {/* Meses anteriores */}
           <Text style={styles.subtitulo}>Meses anteriores</Text>
-          <TouchableOpacity style={styles.botonMes}>
-            <Text style={styles.textoBoton}>Enero 2025</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.botonMes}>
-            <Text style={styles.textoBoton}>Diciembre 2024</Text>
-          </TouchableOpacity>
+          {["Enero 2025", "Diciembre 2024"].map((mes, index) => (
+            <TouchableOpacity key={index} style={styles.botonMes}>
+              <Text style={styles.textoBoton}>{mes}</Text>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
     </Fondo>
   );
+  
 }
 
 const styles = StyleSheet.create({
@@ -235,8 +302,8 @@ const styles = StyleSheet.create({
   titulo: { fontSize: 22, fontWeight: "bold", color: "#2F5D8C", marginBottom: 10 },
   subtitulo: { fontSize: 18, fontWeight: "bold", color: "#2F5D8C", marginTop: 20 },
 
-  botonMedir: { backgroundColor: "#2F5D8C", padding: 10, borderRadius: 5, marginBottom: 15, marginTop: 15 },
-  textoBoton: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold" },
+  botonMedir: { backgroundColor: "#rgb(238, 148, 148)", padding: 5, borderRadius: 9, marginBottom: 7, marginTop: 15 },
+  textoBoton: { color: "#FFFFFF", fontSize: 12, fontWeight: "bold" },
 
   scrollTabla: { maxHeight: 160, width: "100%", backgroundColor: "#FFFFFF", borderBottomEndRadius: 10, borderBottomLeftRadius: 10 },
 
@@ -249,14 +316,33 @@ const styles = StyleSheet.create({
   celda: { flex: 1, textAlign: "center", color: "#2F5D8C" },
 
   grafica: { marginTop: 20, borderRadius: 10 },
-  filtrosContainer: { flexDirection: "row", justifyContent: "center", marginTop: 10 },
+  filtrosContainer: { flexDirection: "row", justifyContent: "center", marginTop: 10, marginBottom:10 },
   botonFiltro: { padding: 8, marginHorizontal: 5, borderRadius: 5, backgroundColor: "#C7F2E6" },
   botonFiltroActivo: { backgroundColor: "#2F5D8C" },
   textoFiltro: { color: "#2F5D8C", fontWeight: "bold" },
 
   botonMes: { padding: 10, borderRadius: 5, marginTop: 10, width: "100%", alignItems: "center", backgroundColor: '#2F5D8C' },
 
-  fechaNavigation: { flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  fechaNavigationContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  
+  fechaNavigation: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  
   arrowButton: { padding: 10 },
   arrowText: { fontSize: 20, fontWeight: "bold", color: "#2F5D8C" },
+  separator: {
+    height: 1,
+    backgroundColor: "#ccc",
+    marginVertical: 15,
+  }
 });
