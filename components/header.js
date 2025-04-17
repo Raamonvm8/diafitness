@@ -17,6 +17,8 @@ export default function Header() {
       case 'Dieta': return 'Dieta';
       case 'Calendar': return 'Calendario';
       case 'Perfil': return 'Perfil';
+      case 'Login': return 'Iniciar sesión'; 
+
       default: return '';
     }
   };
