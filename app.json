@@ -20,6 +20,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "CAMERA",
+        "MEDIA_LIBRARY"
+      ],
       "package": "com.anonymous.diafitness"
     },
     "web": {

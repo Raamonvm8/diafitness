@@ -1,27 +1,86 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import NavBottons from './navMenu/navBottons'
-import { NavigationContainer, useNavigationState } from '@react-navigation/native';
-import Header from './components/header';
-import Fondo from './components/fondo';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Header from './components/header';
+import NavBottons from './navMenu/navBottons';
+import Login from './components/login/login';
+import Register from './components/login/register';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { FIREBASE_AUTH } from './FirebaseConfig';
+
+const AuthStack = createNativeStackNavigator();
+const AppStack = createNativeStackNavigator();
+
+function AuthStackScreen() {
+  return (
+    <AuthStack.Navigator>
+      <AuthStack.Screen
+        name="Login"
+        component={Login}
+        options={{ headerShown: false }}
+      />
+      <AuthStack.Screen
+        name="Register"
+        component={Register}
+        options={{
+          title: 'Crear cuenta', 
+          headerStyle: {
+            backgroundColor: '#2F5D8C',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+        }}
+      />
+    </AuthStack.Navigator>
+  );
+}
 
 
+function AppStackScreen() {
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar style="light" />
+      <Header />
+      <View style={styles.container}>
+        <NavBottons />
+      </View>
+    </SafeAreaView>
+  );
+}
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
+      setUser(user);
+      setLoadingAuth(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  if (loadingAuth) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2F5D8C" />
+      </View>
+    );
+  }
+
   return (
+    
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-          <StatusBar style="light" />
-          <Header />
-          <View style={styles.container}>
-            <NavBottons />
-          </View>
-        </SafeAreaView>
-      </NavigationContainer>
+        <NavigationContainer>
+          {user ? <AppStackScreen /> : <AuthStackScreen />}
+        </NavigationContainer>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );
@@ -34,5 +93,10 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
