@@ -79,7 +79,14 @@ export default function Perfil() {
           <Text style={styles.editText}>Editar Perfil</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity onPress={async () => {
+          try {
+            const auth = getAuth();
+            await signOut(auth);
+          } catch (error) {
+            console.error('Error al cerrar sesión:', error.message);
+          }
+        }} style={styles.logoutButton}>
           <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
           <Text style={styles.logoutText}>Cerrar sesión</Text>
         </TouchableOpacity>
