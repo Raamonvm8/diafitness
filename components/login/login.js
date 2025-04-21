@@ -30,7 +30,7 @@ export default function Login() {
             <TextInput value={email} style={styles.input} placeholder="Email" autoCapitalize='none' onChangeText={setEmail} />
             <TextInput secureTextEntry value={password} style={styles.input} placeholder="Password" autoCapitalize='none' onChangeText={setPassword} />
             {loading ? (
-                <ActivityIndicator size="large" color="#0000ff" />
+                <ActivityIndicator size="large" color="#2F5D8C" />
             ) : (
                 <>
                     <Button title='Login' onPress={signIn} />
