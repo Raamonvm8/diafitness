@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Dieta from './dieta';
 import CrearReceta from './CrearReceta';
+import CrearDieta from './CrearDieta';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,16 @@ export default function DietaStack() {
         options={{
           presentation: 'modal',
           title: 'Crear Receta',
+          headerStyle: { backgroundColor: '#2F5D8C' },
+          headerTintColor: '#fff',
+        }} 
+      />
+      <Stack.Screen 
+        name="CrearDieta" 
+        component={CrearDieta} 
+        options={{
+          presentation: 'modal',
+          title: 'Crear Dieta',
           headerStyle: { backgroundColor: '#2F5D8C' },
           headerTintColor: '#fff',
         }} 
