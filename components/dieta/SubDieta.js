@@ -104,14 +104,11 @@ export default function SubDieta() {
     };
     
     const handleFilterSelection = (newFilter) => {
-      // Cerramos el dropdown inmediatamente al seleccionar una opción
       setDropdownVisible(false);
       
-      // Actualizamos el filtro después
       setFilter(newFilter);
     };
     
-    // Cerrar dropdown cuando se toca fuera de él
     const closeDropdown = () => {
       if (dropdownVisible) {
         setDropdownVisible(false);
@@ -224,6 +221,8 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#2F5D8C',
     marginBottom: 20,
     width: 80
   },
