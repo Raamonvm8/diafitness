@@ -56,7 +56,7 @@ export default function HomePage() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, marginBottom: 50 },
   main: {
     alignItems: 'center',
     paddingVertical: 60,
