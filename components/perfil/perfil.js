@@ -11,6 +11,12 @@ import { useNavigation } from '@react-navigation/native';
 export default function Perfil() {
   const [usuario, setUsuario] = useState(null);
 
+  const objetivosDelMes = [
+    'Ir al gimnasio 3 veces por semana',
+    'Beber 2L de agua al día',
+    'Evitar azúcar procesado'
+  ];
+
   useEffect(() => {
     const cargarDatosUser = async () => {
       const auth = getAuth();
@@ -73,6 +79,17 @@ export default function Perfil() {
         </View>
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Objetivos de este mes</Text>
+        {objetivosDelMes.map((objetivo, i) => (
+          <Text key={i} style={styles.infoText}>- {objetivo}</Text>
+        ))}
+
+        <TouchableOpacity style={styles.botonSecundario}>
+          <Text style={styles.botonSecundarioTexto}>Gestionar objetivos</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.editButton}>
           <Ionicons name="create-outline" size={20} color="#2F5D8C" />
@@ -99,6 +116,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E0F0FF',
+    marginBottom: 60
   },
   header: {
     backgroundColor: '#2F5D8C',
@@ -196,5 +214,16 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     color: '#FFFFFF',
     fontWeight: 'bold',
+  },
+  botonSecundario: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#E0F0FF',
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  botonSecundarioTexto: {
+    color: '#2F5D8C',
+    fontWeight: '600',
   },
 });
