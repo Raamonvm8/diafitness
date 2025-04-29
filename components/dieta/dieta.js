@@ -26,12 +26,12 @@ export default function Dieta() {
         <TouchableOpacity
           style={[
             styles.tabButton,
-            selectedTab === 'receta' && styles.tabButtonActive,
+            selectedTab === 'comida' && styles.tabButtonActive,
           ]}
-          onPress={() => setSelectedTab('receta')}
+          onPress={() => setSelectedTab('comida')}
         >
-          <Text style={selectedTab === 'receta' ? styles.tabTextActive : styles.tabText}>
-            Recetas
+          <Text style={selectedTab === 'comida' ? styles.tabTextActive : styles.tabText}>
+            Comidas
           </Text>
         </TouchableOpacity>
       </View>
