@@ -62,16 +62,7 @@ export default function CalendarioView() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.objetivosMes}>
-        <Text style={styles.subtitulo}>Objetivos de este mes</Text>
-        {objetivosDelMes.map((objetivo, i) => (
-          <Text key={i} style={styles.objetivo}>- {objetivo}</Text>
-        ))}
-
-        <TouchableOpacity style={styles.botonSecundario}>
-          <Text style={styles.botonSecundarioTexto}>Gestionar objetivos</Text>
-        </TouchableOpacity>
-      </View>
+      
 
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
