@@ -59,7 +59,6 @@ const CrearRecetaScreen = () => {
     let permiso = await ImagePicker.getMediaLibraryPermissionsAsync();
   
     if (!permiso.granted) {
-      // Si el permiso puede volver a pedirse, lo pedimos
       if (!permiso.canAskAgain) {
         Alert.alert(
           'Permiso requerido',
@@ -196,10 +195,10 @@ const CrearRecetaScreen = () => {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 120 }} style={styles.container}>
-      <Text style={styles.titulo}>Crear nueva receta</Text>
+      
   
       <TextInput
-        placeholder="Nombre de la receta"
+        placeholder="Nombre de la comida"
         style={styles.input}
         value={nombreReceta}
         onChangeText={setNombreReceta}
@@ -210,8 +209,10 @@ const CrearRecetaScreen = () => {
         value={description}
         onChangeText={setDescription}
       />
-  
-      {/* Ingredientes */}
+      <View>
+
+      </View>
+      <Text style={styles.titulo}>Describe la receta</Text>
       <View style={styles.ingredienteContainer}>
         <Text style={styles.subtitulo}>Ingredientes</Text>
   
@@ -256,7 +257,6 @@ const CrearRecetaScreen = () => {
         ))}
       </View>
   
-      {/* Pasos */}
       <View style={styles.pasosContainer}>
         <Text style={styles.subtitulo}>Pasos</Text>
   
