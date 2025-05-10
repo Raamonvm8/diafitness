@@ -19,9 +19,10 @@ import {
 } from 'firebase/firestore';
 import { FIREBASE_DB } from '../../FirebaseConfig';
 import { useNavigation } from '@react-navigation/native';
+import CrearRecetaScreen from './CrearReceta';
 
-const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const SECCIONES = ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena'];
+const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+const SECCIONES = ['Desayuno', 'Media Mañana', 'Almuerzo', 'Merienda', 'Cena'];
 
 export default function CrearDieta() {
   const [title, setTitle] = useState('');
@@ -165,18 +166,16 @@ export default function CrearDieta() {
         onChangeText={setDescription}
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.diasContainer}>
-        {DIAS.map((dia, index) => (
-          <TouchableOpacity
-            key={index}
-            onPress={() => handleDiaChange(index)}
-            style={[styles.diaBtn, diaActualIndex === index && styles.diaActivo]}>
-            <Text style={[styles.diaTexto, diaActualIndex === index && styles.diaActivo]}>{dia}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.selectorContainer}>
+        <TouchableOpacity onPress={() => setDiaActualIndex((prev) => (prev - 1 + DIAS.length) % DIAS.length)}>
+          <Text style={styles.flecha}>◀</Text>
+        </TouchableOpacity>
+        <Text style={styles.selectorTexto}>{['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][diaActualIndex]}</Text>
+        <TouchableOpacity onPress={() => setDiaActualIndex((prev) => (prev + 1) % DIAS.length)}>
+          <Text style={styles.flecha}>▶</Text>
+        </TouchableOpacity>
+      </View>
 
-      <Text style={styles.tituloDia}>{DIAS[diaActualIndex]}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.seccionesContainer}>
         {SECCIONES.map((seccion, index) => (
           <TouchableOpacity
@@ -188,7 +187,7 @@ export default function CrearDieta() {
         ))}
       </ScrollView>
 
-      <View style={styles.inputRow}>
+      {/*<View style={styles.inputRow}>
         <TextInput
           style={[styles.input, { flex: 1 }]}
           placeholder="Nombre comida"
@@ -204,7 +203,7 @@ export default function CrearDieta() {
         <TouchableOpacity style={styles.botonVerde} onPress={agregarComida}>
           <Text style={styles.diaTexto}>Añadir</Text>
         </TouchableOpacity>
-      </View>
+      </View>  */}
 
       {dieta[DIAS[diaActualIndex]]?.[seccionActual]?.map((comida, i) => (
         <View key={i} style={[styles.comidaItem, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
@@ -214,12 +213,13 @@ export default function CrearDieta() {
           </TouchableOpacity>
         </View>
       ))}
-      <View style={{flexDirection: 'row', justifyContent: 'center', gap:10}} >
+
+      <View style={{marginVertical: 30, flexDirection: 'row', justifyContent: 'center', gap:10}} >
         <TouchableOpacity style={styles.botonAzul} onPress={() => setMostrarMisComidas(!mostrarMisComidas)}>
-          <Text style={styles.botonTexto}>Ver mis comidas</Text>
+          <Text style={styles.botonTexto}>Ver mis {seccionActual}s</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.botonAzul}>
-          <Text style={styles.botonTexto}>Historial desayunos</Text>
+        <TouchableOpacity style={styles.botonAzul} onPress={ () => navigation.navigate('CrearReceta')}>
+          <Text style={styles.botonTexto}>Crear {seccionActual}</Text>
         </TouchableOpacity>
       </View>
       
@@ -294,4 +294,23 @@ const styles = StyleSheet.create({
   textContainer: { flex: 1, padding: 10 },
   recetaTitle: { fontWeight: 'bold', fontSize: 16, color: '#2F5D8C' },
   recetaSubtitle: { fontSize: 14, color: '#555' },
+  selectorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 25,
+    marginTop: 10,
+    gap: 15,
+  },
+  flecha: {
+    fontSize: 24,
+    color: '#2F5D8C',
+    marginHorizontal: 50,
+  },
+  selectorTexto: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2F5D8C',
+  },
+  
 });

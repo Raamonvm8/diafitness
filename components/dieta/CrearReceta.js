@@ -13,15 +13,19 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { FIREBASE_DB } from '../../FirebaseConfig';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 
 
 const CrearRecetaScreen = () => {
   const [nombreReceta, setNombreReceta] = useState('');
   const [description, setDescription] = useState('');
+  const route = useRoute();
+  const tipoLlamada = route.params?.tipo || 'tipo de comida';
+  const [tipo, setTipo] = useState(tipoLlamada);
+
   const [ingredientes, setIngredientes] = useState([]);
   const [pasos, setPasos] = useState([]);
   const [imagenURL, setImagenURL] = useState(null);
@@ -29,7 +33,12 @@ const CrearRecetaScreen = () => {
   const [cantidadIngrediente, setCantidadIngrediente] = useState('');
   const [unidadMedida, setUnidadMedida] = useState('g');
   const [paso, setPaso] = useState('');
+  const [objetivo, setObjetivo] = useState([]);
+
   const navigation = useNavigation();
+
+  
+  
 
   const agregarIngrediente = () => {
     if (!nombreIngrediente || !cantidadIngrediente) {
@@ -137,8 +146,8 @@ const CrearRecetaScreen = () => {
       type: 'image/jpeg',
       name: 'foto.jpg'
     });
-    data.append('upload_preset', 'mi_preset'); // <-- tu preset
-    data.append('cloud_name', 'djpa1rej0'); // <-- tu cloud name
+    data.append('upload_preset', 'mi_preset');
+    data.append('cloud_name', 'djpa1rej0'); 
 
     try {
       const res = await fetch('https://api.cloudinary.com/v1_1/djpa1rej0/image/upload', {
@@ -155,7 +164,7 @@ const CrearRecetaScreen = () => {
   };
 
   const guardarReceta = async () => {
-    if (!nombreReceta || !description || ingredientes.length === 0 || pasos.length === 0) {
+    if (!nombreReceta || tipo ==='tipo de comida' || !description || ingredientes.length === 0) {
       Alert.alert('Datos incompletos', 'Por favor completa todos los campos.');
       return;
     }
@@ -174,18 +183,80 @@ const CrearRecetaScreen = () => {
         imagenEnlace = await subirImagenACloudinary(imagenURL);
       }
   
-      await addDoc(collection(FIREBASE_DB, 'recetas'), {
+      const recetaData = {
         title: nombreReceta,
-        description: description,
-        ingredients: ingredientes,
-        steps: pasos,
+        description,
+        tipo,
+        ingredientes,
+        pasos,
         image: imagenEnlace,
         createdAt: new Date(),
         userId: user.uid,
-      });
+      };
+  
+      const recetaRef = await addDoc(collection(FIREBASE_DB, 'recetas'), recetaData);
   
       Alert.alert("Éxito", "Receta guardada correctamente.");
       navigation.goBack();
+  
+      const ingredientesString = ingredientes.map(
+        ing => `${ing.cantidad} ${ing.unidad} de ${ing.nombre}`
+      ).join(', ');
+  
+      setTimeout(async () => {
+        try {
+          const response = await fetch('http://10.0.2.2:11434/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'llama3',
+              prompt: `Clasifica el objetivo nutricional de esta receta: "${description}", "${ingredientesString}". Devuelve estrictamente un array JSON llamado "objetivos" con los elementos seleccionados de: ["Alta en proteínas", "Baja en calorías", "Alta en calorías", "Alta en carbohidratos", "Baja en carbohidratos", "Bajo índice glucémico", "Alta en fibra", "Sin lactosa", "Sin gluten", "Vegana", "Vegetariana"].
+
+Solo incluye los elementos que realmente correspondan según los ingredientes y cantidades. Evalúa los valores por ración (según el número de personas). Utiliza las siguientes reglas aproximadas:
+
+- "Alta en proteínas" si contiene más de 20 g de proteína por ración.
+- "Alta en calorías" si supera 600 kcal por ración. "Baja en calorías" si es menor de 400 kcal por ración.
+- "Alta en carbohidratos" si tiene más de 40 g de carbohidratos por ración. "Baja en carbohidratos" si tiene menos de 20 g.
+- "Bajo índice glucémico" si todos los carbohidratos provienen de legumbres, vegetales, frutas bajas en azúcar o cereales integrales.
+- "Alta en fibra" si tiene más de 7 g de fibra por ración.
+- "Sin lactosa" si no contiene leche, queso, yogur u otros lácteos.
+- "Sin gluten" si no contiene trigo, cebada, centeno ni pan normal.
+- "Vegana" si no contiene ingredientes animales.
+- "Vegetariana" si no contiene carne ni pescado.
+
+No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["Alta en proteínas", "Alta en fibra", "Vegana"].`,
+              stream: false
+            })
+          });
+  
+          const data = await response.json();
+          let objetivos = [];
+  
+          try {
+            const parsed = JSON.parse(data.response.trim());
+            if (Array.isArray(parsed)) {
+              objetivos = parsed;
+            } else if (Array.isArray(parsed.objetivos)) {
+              objetivos = parsed.objetivos
+                .filter(item => item.value === true)
+                .map(item => item.label);
+            }
+          } catch {
+            const matches = data.response.match(/"([^"]+)"/g);
+            if (matches) {
+              objetivos = matches.map(str => str.replace(/"/g, ''));
+            }
+          }
+  
+          await updateDoc(doc(FIREBASE_DB, 'recetas', recetaRef.id), {
+            objetivo: { objetivos },
+          });
+  
+        } catch (error) {
+          console.error("Error al obtener y guardar el objetivo nutricional:", error);
+        }
+      }, 500);
+  
     } catch (error) {
       console.error("Error al crear receta: ", error);
       Alert.alert("Error", "No se pudo guardar la receta.");
@@ -196,7 +267,6 @@ const CrearRecetaScreen = () => {
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 120 }} style={styles.container}>
       
-  
       <TextInput
         placeholder="Nombre de la comida"
         style={styles.input}
@@ -209,9 +279,22 @@ const CrearRecetaScreen = () => {
         value={description}
         onChangeText={setDescription}
       />
-      <View>
 
+      <View style={styles.medidaDropdown}>
+        <Picker
+          selectedValue={tipo}
+          onValueChange={(value) => setTipo(value)}
+        >
+          <Picker.Item label="tipo de comida" value="tipo de comida" />
+          <Picker.Item label="desayuno" value="desayuno" />
+          <Picker.Item label="media mañana" value="media mañana" />
+          <Picker.Item label="comida" value="comida" />
+          <Picker.Item label="merienda" value="merienda" />
+          <Picker.Item label="cena" value="cena" />
+        </Picker>
+        
       </View>
+      
       <Text style={styles.titulo}>Describe la receta</Text>
       <View style={styles.ingredienteContainer}>
         <Text style={styles.subtitulo}>Ingredientes</Text>
@@ -259,18 +342,20 @@ const CrearRecetaScreen = () => {
   
       <View style={styles.pasosContainer}>
         <Text style={styles.subtitulo}>Pasos</Text>
-  
-        <TextInput
-          placeholder="Describe un paso"
-          style={styles.input}
-          value={paso}
-          onChangeText={setPaso}
-        />
-        <View style={styles.botonCentrado}>
-          <TouchableOpacity style={styles.botonCustom} onPress={agregarPaso}>
-            <Text style={styles.botonCustomText}>Añadir paso</Text>
-          </TouchableOpacity>
+        <View style={{flexDirection: 'row', gap: 20}} >
+          <TextInput
+            placeholder="Describe un paso"
+            style={styles.inputPaso}
+            value={paso}
+            onChangeText={setPaso}
+          />
+          <View >
+            <TouchableOpacity style={styles.botonCustomPaso} onPress={agregarPaso}>
+              <Text style={styles.botonCustomText}>Añadir</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        
   
         {pasos.map((item, index) => (
           <Text key={index} style={styles.pasoItem}>
@@ -325,6 +410,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#fff',
   },
+  inputPaso: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    padding: 10,
+    backgroundColor: '#fff',
+    width: '78%'
+  },
   inputSmall: {
     flex: 1,
     marginRight: 5,
@@ -372,6 +465,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#2F5D8C',
     paddingVertical: 10,
     paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  botonCustomPaso: {
+    backgroundColor: '#2F5D8C',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
     borderRadius: 8,
   },
   botonCustomText: {

@@ -44,6 +44,7 @@ export default function DietaStack() {
           headerTintColor: '#fff',
         }} 
       />
+      
     </Stack.Navigator>
   );
 }
