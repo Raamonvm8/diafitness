@@ -6,10 +6,11 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 
 import HomePage from '../components/homePage';
 //import Dieta from '../components/dieta/dieta';
-import Glucosa from '../components/glucosa/glucosa';
+//import Glucosa from '../components/glucosa/glucosa';
 import Perfil from '../components/perfil/perfil';
 import Calendar from '../components/calendar/calendar';
 import DietaStack from '../components/dieta/dietaStack';
+import StackGlucosa from '../components/glucosa/stackGlucosa';
 
 const Tab = createBottomTabNavigator();
 
@@ -63,7 +64,7 @@ export default function NavBottons() {
     >
       <Tab.Screen name="Inicio" component={HomePage} />
       <Tab.Screen name="Dieta" component={DietaStack} />
-      <Tab.Screen name="Glucosa" component={Glucosa} />
+      <Tab.Screen name="Glucosa" component={StackGlucosa} />
       <Tab.Screen name="Calendar" component={Calendar} />
       <Tab.Screen name="Perfil" component={Perfil} />
     </Tab.Navigator>
