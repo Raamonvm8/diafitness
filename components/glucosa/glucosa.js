@@ -4,220 +4,226 @@ import { LineChart } from "react-native-chart-kit";
 import { Dimensions } from "react-native";
 import Fondo from "../fondo";
 import moment from "moment";
-
-
+import { useNavigation } from '@react-navigation/native';
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { FIREBASE_DB } from "../../FirebaseConfig";
+import { getAuth } from "firebase/auth";
+import MonthYearPicker from 'react-native-month-year-picker';
 
 
 export default function Glucosa() {
-  const [mostrarDatos, setMostrarDatos] = useState(true); 
+  const [mostrarDatos, setMostrarDatos] = useState(true);
   const [filtro, setFiltro] = useState("dia");
   const [diaMostrado, setDiaMostrado] = useState("");
   const [semanaMostrada, setSemanaMostrada] = useState(moment().startOf("isoWeek"));
-  const [esSemana, setSemana] = useState(false);
-  const [esDia, setDia] = useState(false);
+  const [datosGlucosa, setDatosGlucosa] = useState([]);
+  const [mesMostrado, setMesMostrado] = useState(moment().startOf("month"));
 
+  const [mostrarSelectorMes, setMostrarSelectorMes] = useState(false);
 
-  const cambiarSemanaAnterior = () => {
-    setSemanaMostrada((prev) => moment(prev).subtract(1, "week"));
-  };
-  
-  const cambiarSemanaSiguiente = () => {
-    const ultimaFecha = obtenerUltimaFecha();
-    const nuevaSemana = moment(semanaMostrada).add(1, "week");
-  
-    // Asegurar que no pase del mes actual
-    if (nuevaSemana.month() === ultimaFecha.month()) {
-      setSemanaMostrada(nuevaSemana);
-    }
-  };
-  
-  const datosGlucosa = [
-    { fecha: "12/03/2025", hora: "10:00", nivel: 100, notas: "recién levantado" },
-    { fecha: "12/03/2025", hora: "13:00", nivel: 163, notas: "caminata 1km" },
-    { fecha: "12/03/2025", hora: "18:00", nivel: 130, notas: "merienda" },
-    { fecha: "11/03/2025", hora: "10:00", nivel: 120, notas: "---" },
-    { fecha: "11/03/2025", hora: "13:00", nivel: 133, notas: "---" },
-    { fecha: "11/03/2025", hora: "18:00", nivel: 110, notas: "---" },
-    { fecha: "11/03/2025", hora: "20:00", nivel: 90, notas: "---" },
-  ];
+  const navigation = useNavigation();
 
   const obtenerUltimaFecha = () => {
     return moment.max(datosGlucosa.map(d => moment(d.fecha, "DD/MM/YYYY")));
   };
 
   useEffect(() => {
-    const ultimaFechaRegistrada = obtenerUltimaFecha();
-    if (filtro === "dia" && ultimaFechaRegistrada) {
-      setDiaMostrado(moment(ultimaFechaRegistrada, "DD/MM/YYYY").format("dddd, DD [de] MMMM"));
-      setDia(true);
-    } else {
-      setDia(false);
-    }
-    if (filtro === "semana" && ultimaFechaRegistrada) {
-      setSemanaMostrada(moment(ultimaFechaRegistrada, "DD/MM/YYYY"));
-      setSemana(true);
-    } else {
-      setSemana(false);
-    }
-  }, [filtro]);
+    const auth = getAuth();
+    const user = auth.currentUser;
+  
+    if (!user) return;
+  
+    const q = query(
+      collection(FIREBASE_DB, "glucosa"),
+      orderBy("createdAt", "desc")
+    );
+  
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const datos = snapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          if (data.userId !== user.uid) return null;
+  
+          const fechaFormateada = moment(data.fecha).format("DD/MM/YYYY");
+  
+          return {
+            id: doc.id,
+            fecha: fechaFormateada,
+            hora: data.hora,
+            nivel: data.nivelGlucosa,
+            nota: data.nota,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+          };
+        })
+        .filter(Boolean);
+  
+      setDatosGlucosa(datos);
+  
+      
+      if (filtro === "dia" && datos.length > 0 && diaMostrado === "") {
+        const fechaMasReciente = moment(datos[0].fecha, "DD/MM/YYYY").format("dddd, DD [de] MMMM");
+        setDiaMostrado(fechaMasReciente);
+      }
+      
+    });
+  
+    return () => unsubscribe();
+  }, [filtro, diaMostrado]);
+  
 
   const procesarDatos = () => {
     const ultimaFechaRegistrada = obtenerUltimaFecha();
     const fechaActual = moment();
-
+  
     if (filtro === "dia") {
       const fechaSeleccionada = moment(diaMostrado, "dddd, DD [de] MMMM");
-
-    const datosDelDia = datosGlucosa.filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(fechaSeleccionada, "day"));
-
-    const labels = datosDelDia.map(d => moment(d.hora, "HH:mm").format("HH:mm"));
-    
-    return {
+     
+  
+      const datosDelDia = datosGlucosa
+      .filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(fechaSeleccionada, "day"))
+      .sort((a, b) => moment(a.hora, "HH:mm").isBefore(moment(b.hora, "HH:mm")) ? -1 : 1);
+      
+      const labels = datosDelDia.map(d => moment(d.hora, "HH:mm").format("HH:mm"));
+  
+      const dataset = datosDelDia.map(d => {
+        const nivel = parseFloat(d.nivel);
+        return isNaN(nivel) ? 0 : nivel; 
+      });
+  
+      return {
         labels: labels,
-        
         datasets: [{
-          data: datosDelDia.length > 0 ? datosDelDia.map(d => d.nivel) : [0],
-          
+          data: dataset.length > 0 ? dataset : [0],
         }],
-    };
-    }
-
-
-    else if (filtro === "semana") {
+      };
+  
+    } else if (filtro === "semana") {
       moment.updateLocale('es', { week: { dow: 1 } });
-
+  
       const ultimaFechaConDatos = datosGlucosa
-          .filter(d => moment(d.fecha, "DD/MM/YYYY").month() === ultimaFechaRegistrada.month()) // Filtrar por mes actual
-          .sort((a, b) => moment(b.fecha, "DD/MM/YYYY").isBefore(moment(a.fecha, "DD/MM/YYYY")) ? 1 : -1)[0]; // Último registro
-
+        .filter(d => moment(d.fecha, "DD/MM/YYYY").month() === ultimaFechaRegistrada.month())
+        .sort((a, b) => moment(b.fecha, "DD/MM/YYYY").isBefore(moment(a.fecha, "DD/MM/YYYY")) ? 1 : -1)[0]; 
+  
       if (!ultimaFechaConDatos) {
-          return {
-              labels: [],
-              datasets: [{ data: [] }]
-          };
+        return {
+          labels: [],
+          datasets: [{ data: [] }],
+        };
       }
-
+  
       const fechaUltimaConDatos = moment(ultimaFechaConDatos.fecha, "DD/MM/YYYY");
       const fechaInicioSemana = fechaUltimaConDatos.startOf('week');
-
+  
       const semanaLabels = [];
       const semanaData = [];
-
+  
       const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
+  
       for (let i = 0; i < 7; i++) {
-          const dia = fechaInicioSemana.clone().add(i, 'days');  
-          semanaLabels.push(`${diasSemana[i]} (${dia.date()})`);
-
-          const valoresDia = datosGlucosa.filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(dia, "day"));
-
-          if (valoresDia.length > 0) {
-              semanaData.push(valoresDia.reduce((a, b) => a + b.nivel, 0) / valoresDia.length);
-          } else {
-              semanaData.push(0); 
-          }
+        const dia = moment(semanaMostrada).add(i, "days");
+        semanaLabels.push(dia.format("dd (D)"));
+  
+        const valoresDia = datosGlucosa.filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(dia, "day"));
+        const promedioDia = valoresDia.length ? valoresDia.reduce((a, b) => a + parseFloat(b.nivel), 0) / valoresDia.length : 0;
+  
+        semanaData.push(promedioDia);
       }
-
+      
+  
       return {
-          labels: semanaLabels,  
-          datasets: [{ data: semanaData }],
+        labels: semanaLabels,
+        datasets: [{ data: semanaData }],
       };
-    }
   
-  
-
-    // Filtro por mes
-    else if (filtro === "mes") {
+    } else if (filtro === "mes") {
       const primerDiaDelMes = ultimaFechaRegistrada.startOf('month');
       let fechaInicioMes = primerDiaDelMes;
-
+  
       const diasDelMes = {};
       datosGlucosa.forEach(d => {
         const diaNum = parseInt(d.fecha.split("/")[0]);
         if (!diasDelMes[diaNum]) diasDelMes[diaNum] = [];
         diasDelMes[diaNum].push(d.nivel);
       });
-
+  
       const diasLabels = Object.keys(diasDelMes).map(num => num.toString());
-      const diasData = Object.values(diasDelMes).map(arr => arr.reduce((a, b) => a + b, 0) / arr.length);
-
+      const diasData = Object.values(diasDelMes).map(arr => {
+        const suma = arr.reduce((a, b) => a + parseFloat(b), 0);
+        const promedio = suma / arr.length;
+        return isNaN(promedio) ? 0 : promedio; 
+      });
+  
       return {
         labels: diasLabels,
-        datasets: [{ data: diasData }]
+        datasets: [{ data: diasData }],
       };
     }
   };
+  
 
   const cambiarFechaAnterior = () => {
     if (filtro === "dia") {
-      const nuevaFecha = moment(diaMostrado, "dddd, DD [de] MMMM").subtract(1, "days");
-      setDiaMostrado(nuevaFecha.format("dddd, DD [de] MMMM"));
+      setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM").subtract(1, "days").format("dddd, DD [de] MMMM"));
     } else if (filtro === "semana") {
-      cambiarSemanaAnterior();
+      setSemanaMostrada(prev => moment(prev).subtract(1, "week"));
     }
   };
-  
+
   const cambiarFechaSiguiente = () => {
     if (filtro === "dia") {
-      const nuevaFecha = moment(diaMostrado, "dddd, DD [de] MMMM").add(1, "days");
-      setDiaMostrado(nuevaFecha.format("dddd, DD [de] MMMM"));
+      setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM").add(1, "days").format("dddd, DD [de] MMMM"));
     } else if (filtro === "semana") {
-      cambiarSemanaSiguiente();
-    }
+      setSemanaMostrada(prev => moment(prev).add(1, "week"));
+    } 
   };
-  
   
 
   return (
     <Fondo>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.main}>
-          {/* Botón para mostrar/ocultar datos */}
-          {/*<TouchableOpacity
-            style={[
-              styles.botonMes,
-              {
-                backgroundColor: mostrarDatos ? "#C7F2E6" : "#2F5D8C",
-                width: mostrarDatos ? "60%" : "100%",
-              },
-            ]}
-            onPress={() => setMostrarDatos(!mostrarDatos)}
-          >
-            <Text
-              style={[
-                styles.textoBoton,
-                { color: mostrarDatos ? "#2F5D8C" : "#FFFFFF" },
-              ]}
-            >
-              Marzo 2025 {mostrarDatos ? "👆" : "👇"}
-            </Text> 
-          </TouchableOpacity>*/ }
+        <TouchableOpacity onPress={() => setMostrarSelectorMes(true)} style={styles.botonMes}>
+            <Text style={styles.textoBoton}>{mesMostrado.format("MMMM YYYY")}</Text>
+          </TouchableOpacity>
+
+          {mostrarSelectorMes && (
+            <MonthYearPicker
+              onChange={(event, date) => {
+                setMostrarSelectorMes(false);
+                if (date) {
+                  setMesMostrado(moment(date));
+                }
+              }}
+              value={mesMostrado.toDate()}
+              minimumDate={new Date(2020, 0)} 
+              maximumDate={new Date(2030, 11)} 
+            />
+          )}
   
           {mostrarDatos && (
             <>
-              
-
               <View style={styles.fechaNavigationContainer}>
                 <View style={styles.fechaNavigation}>
-                  <TouchableOpacity onPress={cambiarFechaAnterior} style={styles.arrowButton}>
-                    <Text style={styles.arrowText}>←</Text>
-                  </TouchableOpacity>
+                  {filtro !== "mes" && (
+                    <TouchableOpacity onPress={cambiarFechaAnterior} style={styles.arrowButton}>
+                      <Text style={styles.arrowText}>←</Text>
+                    </TouchableOpacity>
+                  )}
                   <Text style={[styles.textoFiltro, { marginTop: 10, marginBottom: -10 }]}>
-                    {filtro === "dia" ? diaMostrado : filtro === "semana" ? `Semana del ${semanaMostrada.format("DD/MM/YYYY")}` : ""}
+                    {filtro === "dia" ? diaMostrado : filtro === "semana" ? `Semana del ${semanaMostrada.format("DD/MM/YYYY")}` : mesMostrado.format("MMMM YYYY")}
                   </Text>
-                  <TouchableOpacity onPress={cambiarFechaSiguiente} style={styles.arrowButton}>
-                    <Text style={styles.arrowText}>→</Text>
-                  </TouchableOpacity>
+                  {filtro !== "mes" && (
+                    <TouchableOpacity onPress={cambiarFechaSiguiente} style={styles.arrowButton}>
+                      <Text style={styles.arrowText}>→</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <TouchableOpacity style={styles.botonMedir}>
+                <TouchableOpacity style={styles.botonMedir} onPress={() => navigation.navigate('MedirGlucosa')}>
                   <Text style={styles.textoBoton}>+ Medir</Text>
                 </TouchableOpacity>
               </View>
-
-      
   
-              {/* Gráfico */}
-              {procesarDatos && (
+              {procesarDatos() && (
                 <LineChart
                   data={procesarDatos()}
                   width={Dimensions.get("window").width - 40}
@@ -239,6 +245,7 @@ export default function Glucosa() {
               )}
             </>
           )}
+  
           <View style={styles.filtrosContainer}>
             {["dia", "semana", "mes"].map((tipo) => (
               <TouchableOpacity
@@ -260,34 +267,30 @@ export default function Glucosa() {
               </TouchableOpacity>
             ))}
           </View>
-          <View style={{ height: 1, backgroundColor: "#ffffff", marginVertical: 10, zIndex: 1 }} />
-
-          <View style={styles.tabla}>
-                <View style={styles.filaHeader}>
-                  <Text style={styles.celdaHeader}>Día</Text>
-                  <Text style={styles.celdaHeader}>Hora</Text>
-                  <Text style={styles.celdaHeader}>Nivel</Text>
-                  <Text style={styles.celdaHeader}>Notas</Text>
-                </View>
-                <ScrollView style={styles.scrollTabla} nestedScrollEnabled={true}>
-                  {datosGlucosa?.map((item, index) => (
-                    <View key={index} style={styles.fila}>
-                      <Text style={styles.celda}>{item.fecha}</Text>
-                      <Text style={styles.celda}>{item.hora}</Text>
-                      <Text style={styles.celda}>{item.nivel}</Text>
-                      <Text style={styles.celda}>{item.notas}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
   
-          {/* Meses anteriores */}
-          <Text style={styles.subtitulo}>Meses anteriores</Text>
-          {["Enero 2025", "Diciembre 2024"].map((mes, index) => (
-            <TouchableOpacity key={index} style={styles.botonMes}>
-              <Text style={styles.textoBoton}>{mes}</Text>
-            </TouchableOpacity>
-          ))}
+          <View style={{ height: 1, backgroundColor: "#ffffff", marginVertical: 10, zIndex: 1 }} />
+  
+          <View style={styles.tabla}>
+            <View style={styles.filaHeader}>
+              <Text style={styles.celdaHeader}>Día</Text>
+              <Text style={styles.celdaHeader}>Hora</Text>
+              <Text style={styles.celdaHeader}>Nivel (mg/dL)</Text>
+              <Text style={styles.celdaHeader}>Notas</Text>
+            </View>
+            <ScrollView style={styles.scrollTabla} nestedScrollEnabled={true}>
+              {datosGlucosa?.map((item, index) => (
+                <View key={index} style={styles.fila}>
+                  <Text style={styles.celda}>{item.fecha}</Text>
+                  <Text style={styles.celda}>{item.hora}</Text>
+                  <Text style={styles.celda}>{item.nivel}</Text>
+                  <Text style={styles.celda}>{item.nota}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+          
+          
+
         </ScrollView>
       </View>
     </Fondo>
@@ -339,7 +342,7 @@ const styles = StyleSheet.create({
   },
   
   arrowButton: { padding: 10 },
-  arrowText: { fontSize: 20, fontWeight: "bold", color: "#2F5D8C" },
+  arrowText: { marginTop: 20, fontSize: 20, fontWeight: "bold", color: "#2F5D8C" },
   separator: {
     height: 1,
     backgroundColor: "#ccc",
