@@ -58,17 +58,33 @@ export default function Glucosa() {
         .filter(Boolean);
   
       setDatosGlucosa(datos);
-  
       
-      if (filtro === "dia" && datos.length > 0 && diaMostrado === "") {
-        const fechaMasReciente = moment(datos[0].fecha, "DD/MM/YYYY").format("dddd, DD [de] MMMM");
-        setDiaMostrado(fechaMasReciente);
+      if (filtro === "dia") {
+        if(moment().isSame(mesMostrado, 'month')){
+          const ultimaFecha = obtenerUltimaFecha();
+          const fechaUltimoDia = ultimaFecha.format("dddd, DD [de] MMMM YYYY");
+          setDiaMostrado(fechaUltimoDia);
+        }else{
+          const primerDiaMesSeleccionado = moment(mesMostrado).startOf("month").format("dddd, DD [de] MMMM YYYY");
+          setDiaMostrado(primerDiaMesSeleccionado);
+          console.log("Mostrando el primer día del mes y año seleccionados:", primerDiaMesSeleccionado);
+        }
+        
       }
-      
+      if (filtro === "semana" && mesMostrado) {
+        const primerLunesMes = moment(mesMostrado).startOf("month");
+        while (primerLunesMes.day() !== 1) {
+          primerLunesMes.add(1, "days");
+        }
+        setSemanaMostrada(primerLunesMes);
+      }
     });
   
     return () => unsubscribe();
-  }, [filtro, diaMostrado]);
+  }, [filtro, mesMostrado]);
+  
+  
+  
   
 
   const procesarDatos = () => {
@@ -76,82 +92,95 @@ export default function Glucosa() {
     const fechaActual = moment();
   
     if (filtro === "dia") {
-      const fechaSeleccionada = moment(diaMostrado, "dddd, DD [de] MMMM");
-     
+      const fechaSeleccionada = moment(diaMostrado, "dddd, DD [de] MMMM YYYY");
   
       const datosDelDia = datosGlucosa
-      .filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(fechaSeleccionada, "day"))
-      .sort((a, b) => moment(a.hora, "HH:mm").isBefore(moment(b.hora, "HH:mm")) ? -1 : 1);
-      
-      const labels = datosDelDia.map(d => moment(d.hora, "HH:mm").format("HH:mm"));
+        .filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(fechaSeleccionada, "day"))
+        .sort((a, b) => moment(a.hora, "HH:mm").isBefore(moment(b.hora, "HH:mm")) ? -1 : 1);
   
-      const dataset = datosDelDia.map(d => {
-        const nivel = parseFloat(d.nivel);
-        return isNaN(nivel) ? 0 : nivel; 
-      });
+      const labels = datosDelDia.length > 0 
+        ? datosDelDia.map(d => moment(d.hora, "HH:mm").format("HH:mm")) 
+        : ["00:00"];
+  
+      const dataset = datosDelDia.length > 0 
+        ? datosDelDia.map(d => parseFloat(d.nivel) || 0) 
+        : [0];
   
       return {
         labels: labels,
         datasets: [{
-          data: dataset.length > 0 ? dataset : [0],
+          data: dataset,
         }],
       };
-  
     } else if (filtro === "semana") {
-      moment.updateLocale('es', { week: { dow: 1 } });
-  
-      const ultimaFechaConDatos = datosGlucosa
-        .filter(d => moment(d.fecha, "DD/MM/YYYY").month() === ultimaFechaRegistrada.month())
-        .sort((a, b) => moment(b.fecha, "DD/MM/YYYY").isBefore(moment(a.fecha, "DD/MM/YYYY")) ? 1 : -1)[0]; 
-  
-      if (!ultimaFechaConDatos) {
-        return {
-          labels: [],
-          datasets: [{ data: [] }],
-        };
-      }
-  
-      const fechaUltimaConDatos = moment(ultimaFechaConDatos.fecha, "DD/MM/YYYY");
-      const fechaInicioSemana = fechaUltimaConDatos.startOf('week');
-  
+      moment.updateLocale('es', { week: { dow: 1 } }); // Considera el lunes como primer día de la semana
+    
+      const fechaSeleccionada = moment(semanaMostrada, "MMMM YYYY");
+      const fechaInicioSemana = fechaSeleccionada.startOf("week"); // Se asegura que siempre sea el lunes del mes
+    
       const semanaLabels = [];
       const semanaData = [];
-  
-      const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-  
+    
       for (let i = 0; i < 7; i++) {
-        const dia = moment(semanaMostrada).add(i, "days");
-        semanaLabels.push(dia.format("dd (D)"));
-  
-        const valoresDia = datosGlucosa.filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(dia, "day"));
-        const promedioDia = valoresDia.length ? valoresDia.reduce((a, b) => a + parseFloat(b.nivel), 0) / valoresDia.length : 0;
-  
-        semanaData.push(promedioDia);
+        const dia = moment(fechaInicioSemana).add(i, "days");
+    
+        // Verificamos que el día esté dentro del mes seleccionado
+        if (dia.month() === fechaSeleccionada.month()) {
+          semanaLabels.push(dia.format("dd (D)"));
+    
+          const valoresDia = datosGlucosa.filter(d => 
+            moment(d.fecha, "DD/MM/YYYY").isSame(dia, "day")
+          );
+    
+          const promedioDia = valoresDia.length 
+            ? valoresDia.reduce((a, b) => a + parseFloat(b.nivel), 0) / valoresDia.length 
+            : 0;
+    
+          semanaData.push(promedioDia);
+        }
       }
-      
-  
+    
       return {
         labels: semanaLabels,
         datasets: [{ data: semanaData }],
       };
-  
     } else if (filtro === "mes") {
-      const primerDiaDelMes = ultimaFechaRegistrada.startOf('month');
-      let fechaInicioMes = primerDiaDelMes;
+      const fechaInicioMes = moment(mesMostrado).startOf("month");
+      const fechaFinMes = moment(mesMostrado).endOf("month");
   
       const diasDelMes = {};
+      const diasLabels = [];
+      const diasData = [];
+  
+      // Inicializa el objeto para los días del mes
+      for (let dia = 1; dia <= fechaFinMes.date(); dia++) {
+        diasDelMes[dia] = [];
+      }
+  
+      // Filtrar solo los días con datos
       datosGlucosa.forEach(d => {
-        const diaNum = parseInt(d.fecha.split("/")[0]);
-        if (!diasDelMes[diaNum]) diasDelMes[diaNum] = [];
-        diasDelMes[diaNum].push(d.nivel);
+        const fechaDato = moment(d.fecha, "DD/MM/YYYY");
+        if (fechaDato.isSameOrAfter(fechaInicioMes) && fechaDato.isSameOrBefore(fechaFinMes)) {
+          const dia = fechaDato.date();
+          diasDelMes[dia].push(parseFloat(d.nivel));
+        }
       });
   
-      const diasLabels = Object.keys(diasDelMes).map(num => num.toString());
-      const diasData = Object.values(diasDelMes).map(arr => {
-        const suma = arr.reduce((a, b) => a + parseFloat(b), 0);
-        const promedio = suma / arr.length;
-        return isNaN(promedio) ? 0 : promedio; 
+      // Solo agrega los días que tienen datos
+      Object.keys(diasDelMes).forEach(dia => {
+        if (diasDelMes[dia].length > 0) {
+          diasLabels.push(dia);
+          const valores = diasDelMes[dia];
+          const promedio = valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : 0;
+          diasData.push(promedio);
+        }
       });
+  
+      // Si no hay datos para mostrar, manejar el caso vacío
+      if (diasLabels.length === 0) {
+        diasLabels.push("Sin datos");
+        diasData.push(0);
+      }
   
       return {
         labels: diasLabels,
@@ -159,6 +188,7 @@ export default function Glucosa() {
       };
     }
   };
+  
   
 
   const cambiarFechaAnterior = () => {
@@ -184,7 +214,9 @@ export default function Glucosa() {
         <ScrollView contentContainerStyle={styles.main}>
         <TouchableOpacity onPress={() => setMostrarSelectorMes(true)} style={styles.botonMes}>
             <Text style={styles.textoBoton}>{mesMostrado.format("MMMM YYYY")}</Text>
-          </TouchableOpacity>
+            <Text style={styles.textoBoton}>▼</Text>
+
+        </TouchableOpacity>
 
           {mostrarSelectorMes && (
             <MonthYearPicker
@@ -234,7 +266,7 @@ export default function Glucosa() {
                     backgroundGradientTo: "#C7F2E6",
                     decimalPlaces: 1,
                     propsForLabels: {
-                      fontSize: 12,
+                      fontSize: 9,
                       fontWeight: "bold",
                     },
                     color: (opacity = 1) => `rgba(47, 93, 140, ${opacity})`,
@@ -306,7 +338,7 @@ const styles = StyleSheet.create({
   subtitulo: { fontSize: 18, fontWeight: "bold", color: "#2F5D8C", marginTop: 20 },
 
   botonMedir: { backgroundColor: "#rgb(238, 148, 148)", padding: 5, borderRadius: 9, marginBottom: 7, marginTop: 15 },
-  textoBoton: { color: "#FFFFFF", fontSize: 12, fontWeight: "bold" },
+  textoBoton: { color: "#FFFFFF", fontSize: 13, fontWeight: "bold" },
 
   scrollTabla: { maxHeight: 160, width: "100%", backgroundColor: "#FFFFFF", borderBottomEndRadius: 10, borderBottomLeftRadius: 10 },
 
@@ -324,7 +356,7 @@ const styles = StyleSheet.create({
   botonFiltroActivo: { backgroundColor: "#2F5D8C" },
   textoFiltro: { color: "#2F5D8C", fontWeight: "bold" },
 
-  botonMes: { padding: 10, borderRadius: 5, marginTop: 10, width: "100%", alignItems: "center", backgroundColor: '#2F5D8C' },
+  botonMes: { flexDirection:'row', justifyContent: 'center', gap: 20, padding: 10, borderRadius: 5, marginTop: 10, width: "100%", alignItems: "center", backgroundColor: '#2F5D8C' },
 
   fechaNavigationContainer: {
     flexDirection: "row",
