@@ -13,107 +13,187 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
-import { collection, query, where, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import { FIREBASE_DB } from '../../FirebaseConfig';
 import DetalleReceta from './DetalleReceta';
 import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 
 export default function SubReceta() {
   const navigation = useNavigation();
   const [recetas, setRecetas] = useState([]);
+  const [sugerencias, setSugerencias] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [filter, setFilter] = useState('todas');
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
-
+  const CANTIDAD_SUGERENCIAS = 60;
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState({
     tipoComida: [],
     objetivos: []
   });
   const FILTERS = {
-    tipoComida: ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena'],
-    objetivos: ['Bajo en calorías', 'Proteico', 'Rico en hidratos', 'Bajo en grasas', 'Bajo en glucosa']
+    tipoComida: ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena'],
+    objetivos: ['Baja en calorías', 'Alta en proteínas', 'Alta en carbohidratos', 'Baja en grasas', 'Bajo índice glucémico', 'Sin gluten', 'Vegana', 'Vegetariana', 'Alta en fibra', 'Sin lactosa']
   };
-  const sugerencias = [
-    {
-      id: 'sugerencia1',
-      title: 'Ensalada Mediterránea',
-      description: 'Fresca y saludable con tomate, pepino y queso feta',
-      ingredients: [
-        { nombre: 'Tomate', cantidad: 2, unidad: 'unidades' },
-        { nombre: 'Pepino', cantidad: 1, unidad: 'unidad' },
-        { nombre: 'Queso feta', cantidad: 100, unidad: 'g' },
-        { nombre: 'Aceite de oliva', cantidad: 2, unidad: 'cucharadas' },
-      ],
-      steps: [
-        'Cortar el tomate y el pepino en trozos pequeños.',
-        'Añadir el queso feta desmenuzado.',
-        'Aliñar con aceite de oliva.',
-        'Mezclar todo y servir fresco.',
-      ],
-      image: 'https://vivirmejor.mx/wp-content/uploads/2021/01/ensalada-mediterranea.jpg',
-    },
-    {
-      id: 'sugerencia2',
-      title: 'Tacos de Pollo',
-      description: 'Tortillas rellenas de pollo sazonado y vegetales frescos',
-      ingredients: [
-        { nombre: 'Tortillas de maíz', cantidad: 4, unidad: 'unidades' },
-        { nombre: 'Pechuga de pollo', cantidad: 200, unidad: 'g' },
-        { nombre: 'Lechuga', cantidad: 50, unidad: 'g' },
-        { nombre: 'Tomate', cantidad: 1, unidad: 'unidad' },
-        { nombre: 'Salsa', cantidad: 3, unidad: 'cucharadas' },
-      ],
-      steps: [
-        'Cocinar la pechuga de pollo sazonada.',
-        'Calentar las tortillas.',
-        'Colocar pollo, lechuga y tomate en las tortillas.',
-        'Agregar salsa al gusto y servir.',
-      ],
-      image: 'https://comerbeber.com/archivos/imagen/2021/08/burritos-pollo-cortados-cv_960.jpg',
-    },
-    {
-      id: 'sugerencia3',
-      title: 'Pasta Alfredo',
-      description: 'Pasta cremosa con salsa de queso parmesano y mantequilla',
-      ingredients: [
-        { nombre: 'Pasta', cantidad: 200, unidad: 'g' },
-        { nombre: 'Mantequilla', cantidad: 50, unidad: 'g' },
-        { nombre: 'Queso parmesano', cantidad: 100, unidad: 'g' },
-        { nombre: 'Nata para cocinar', cantidad: 100, unidad: 'ml' },
-      ],
-      steps: [
-        'Cocer la pasta hasta que esté al dente.',
-        'Derretir la mantequilla en una sartén.',
-        'Añadir la nata y el queso parmesano.',
-        'Mezclar la pasta con la salsa y servir caliente.',
-      ],
-      image: 'https://th.bing.com/th/id/OIP.fuMZiahJWxTDmHEeTG2nYwHaE7?rs=1&pid=ImgDetMain',
-    },
-  ];
+  const [tempSelectedFilters, setTempSelectedFilters] = useState({
+    tipoComida: [],
+    objetivos: []
+  });
   
+  const [sugerenciasCargadas, setSugerenciasCargadas] = useState(false);
+  const [sugerenciasAleatorias, setSugerenciasAleatorias] = useState([]);
+
+  const [desayuno, setDesayuno] = useState(false);
+  const [mediaMañana, setMediaMañana] = useState(false);
+  const [almuerzo, setAlmuerzo] = useState(false);
+  const [merienda, setMerienda] = useState(false);
+  const [cena, setCena] = useState(false);
+
   
-  const toggleFilter = (section, value) => {
-    const current = selectedFilters[section];
+
+  const toggleTempFilter = (section, value) => {
+    const current = tempSelectedFilters[section];
     const updated = current.includes(value)
       ? current.filter(item => item !== value)
       : [...current, value];
 
-    setSelectedFilters(prev => ({
+    setTempSelectedFilters(prev => ({
       ...prev,
       [section]: updated
     }));
   };
 
-  const applyFilters = () => {
+  useEffect(() => {
+    console.log("hay desayuno?", desayuno);
+    console.log("hay media mañana?", mediaMañana);
+    console.log("hay almuerzo?", almuerzo);
+    console.log("hay merienda?", merienda);
+    console.log("hay cena?", cena);
+    
+  }, [cena, merienda, desayuno, mediaMañana, almuerzo]);
+
+  
+
+
+  const applyFilters = async () => {
+    setSelectedFilters(tempSelectedFilters);
     setModalVisible(false);
-    console.log('Filtros aplicados:', selectedFilters);
-    // Pasar selectedFilters a lógica de filtrado
+    console.log('Filtros aplicados:', tempSelectedFilters);
+
+    setDesayuno(tempSelectedFilters.tipoComida.includes("Desayuno"));
+    setMediaMañana(tempSelectedFilters.tipoComida.includes("Media mañana"));
+    setAlmuerzo(tempSelectedFilters.tipoComida.includes("Almuerzo"));
+    setMerienda(tempSelectedFilters.tipoComida.includes("Merienda"));
+    setCena(tempSelectedFilters.tipoComida.includes("Cena"));
+
+    try {
+      await AsyncStorage.setItem('selectedFilters', JSON.stringify(tempSelectedFilters));
+      
+    } catch (error) {
+      console.error('Error guardando filtros en AsyncStorage:', error);
+    }
   };
 
   useEffect(() => {
+    if (!sugerenciasCargadas) {
+      obtenerSugerencias();
+    }
+  }, [sugerenciasCargadas]);
+
+  useEffect(() => {
+    if (filter === 'sugerencias' && sugerencias.length > 0) {
+      setSugerenciasAleatorias(obtenerSugerenciasAleatorias(sugerencias, CANTIDAD_SUGERENCIAS));
+    }
+  }, [filter, sugerencias]);
+
+  useEffect(() => {
+    if (filter === 'todas') {
+      cargarMisComidas();
+    } else {
+      obtenerSugerencias();
+    }
+  }, [selectedFilters, filter]);
+
+
+
+  const llamarFiltrosMisComidas = (recetas) => {
+    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0) {
+      console.log("NO hay filtros");
+      setRecetas(recetas);
+    } else {
+      const recetasFiltradas = recetas.filter((receta) => {
+        const tieneTipoValido = typeof receta.tipo === 'string';
+
+        const coincideTipo = tieneTipoValido &&
+          selectedFilters.tipoComida
+            .map(f => f.toLowerCase())
+            .includes(receta.tipo.toLowerCase());
+
+        const coincideObjetivo = receta.objetivo?.objetivos && Array.isArray(receta.objetivo?.objetivos)
+          ? selectedFilters.objetivos.every((objetivo) =>
+              receta.objetivo.objetivos
+                .map(f => f.toLowerCase())
+                .includes(objetivo.toLowerCase())
+            )
+          : false;
+
+        console.log(`Receta: ${receta.title} - Tipo: ${receta.tipo} - Coincide Tipo: ${coincideTipo} - Coincide Objetivo: ${coincideObjetivo}`);
+
+        if (selectedFilters.tipoComida.length > 0 && selectedFilters.objetivos.length > 0) {
+          return coincideTipo && coincideObjetivo;
+        } else if (selectedFilters.tipoComida.length > 0) {
+          return coincideTipo;
+        } else if (selectedFilters.objetivos.length > 0) {
+          return coincideObjetivo;
+        }
+      });
+
+      setRecetas(recetasFiltradas);
+    }
+  };
+
+  const llamarFiltrosMisSugerencias = (recetas) => {
+    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0) {
+      console.log("NO hay filtros");
+      setSugerencias(recetas);
+    } else {
+      const recetasFiltradas = recetas.filter((receta) => {
+        const tieneTipoValido = typeof receta.tipo === 'string';
+
+        const coincideTipo = tieneTipoValido &&
+          selectedFilters.tipoComida
+            .map(f => f.toLowerCase())
+            .includes(receta.tipo.toLowerCase());
+
+        const coincideObjetivo = receta.objetivo?.objetivos && Array.isArray(receta.objetivo?.objetivos)
+          ? selectedFilters.objetivos.every((objetivo) =>
+              receta.objetivo.objetivos
+                .map(f => f.toLowerCase())
+                .includes(objetivo.toLowerCase())
+            )
+          : false;
+
+        console.log(`Receta: ${receta.title} - Tipo: ${receta.tipo} - Coincide Tipo: ${coincideTipo} - Coincide Objetivo: ${coincideObjetivo}`);
+
+        if (selectedFilters.tipoComida.length > 0 && selectedFilters.objetivos.length > 0) {
+          return coincideTipo && coincideObjetivo;
+        } else if (selectedFilters.tipoComida.length > 0) {
+          return coincideTipo;
+        } else if (selectedFilters.objetivos.length > 0) {
+          return coincideObjetivo;
+        }
+      });
+
+      setSugerencias(recetasFiltradas);
+    }
+  };
+
+
+  const cargarMisComidas = async () => {
     const auth = getAuth();
     const user = auth.currentUser;
     const recetasRef = collection(FIREBASE_DB, 'recetas');
@@ -127,11 +207,37 @@ export default function SubReceta() {
         id: doc.id,
         ...doc.data(),
       }));
-      setRecetas(recetasUsuario);
+      llamarFiltrosMisComidas(recetasUsuario);
+      
     });
-
+    
     return () => unsubscribe();
-  }, []);
+  }
+    
+  const obtenerSugerencias = async () => {
+    const sugerenciasRef = doc(FIREBASE_DB, 'Sugerencias', 'comidas');
+    try {
+      const docSnap = await getDoc(sugerenciasRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data(); 
+        const todasLasSugerencias = data.sugerencias || [];
+        
+        llamarFiltrosMisSugerencias(todasLasSugerencias);
+        setSugerenciasCargadas(true);
+      } else {
+        console.log('El documento de sugerencias no existe');
+        setSugerencias([]);
+      }
+    } catch (error) {
+      console.error('Error al obtener sugerencias:', error);
+    }
+  };
+
+
+  const obtenerSugerenciasAleatorias = (sugerencias, cantidad) => {
+    const mezcladas = [...sugerencias].sort(() => Math.random() - 0.5);
+    return mezcladas.slice(0, cantidad);
+  };
 
   const eliminarReceta = (id) => {
     Alert.alert(
@@ -176,7 +282,7 @@ export default function SubReceta() {
   };
 
 
-  const recetasMostradas = filter === 'todas' ? recetas : sugerencias;
+  const recetasMostradas = filter === 'todas' ? recetas : sugerenciasAleatorias;
 
   const recetasFiltradas = recetasMostradas.filter(r =>
     r.title.toLowerCase().includes(searchText.toLowerCase())
@@ -239,33 +345,35 @@ export default function SubReceta() {
         <Modal animationType="slide" visible={modalVisible} transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.seccionTitulo}>Tipo de comida</Text>
-              {FILTERS.tipoComida.map((opcion, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => toggleFilter('tipoComida', opcion)}
-                  style={[
-                    styles.opcionBtn,
-                    selectedFilters.tipoComida.includes(opcion) && styles.opcionSeleccionada
-                  ]}
-                >
-                  <Text>{opcion}</Text>
-                </TouchableOpacity>
-              ))}
+              <ScrollView contentContainerStyle={{ paddingBottom: 20 }} style={styles.scrollableModal}>
+                <Text style={styles.seccionTitulo}>Tipo de comida</Text>
+                {FILTERS.tipoComida.map((opcion) => (
+                  <TouchableOpacity
+                    key={opcion}
+                    onPress={() => toggleTempFilter('tipoComida', opcion)}
+                    style={[
+                      styles.opcionBtn,
+                      tempSelectedFilters.tipoComida.includes(opcion) && styles.opcionSeleccionada
+                    ]}
+                  >
+                    <Text>{opcion}</Text>
+                  </TouchableOpacity>
+                ))}
 
-              <Text style={[styles.seccionTitulo, { marginTop: 20 }]}>Objetivos</Text>
-              {FILTERS.objetivos.map((opcion, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => toggleFilter('objetivos', opcion)}
-                  style={[
-                    styles.opcionBtn,
-                    selectedFilters.objetivos.includes(opcion) && styles.opcionSeleccionada
-                  ]}
-                >
-                  <Text>{opcion}</Text>
-                </TouchableOpacity>
-              ))}
+                <Text style={[styles.seccionTitulo, { marginTop: 20 }]}>Objetivos</Text>
+                {FILTERS.objetivos.map((opcion) => (
+                  <TouchableOpacity
+                    key={opcion}
+                    onPress={() => toggleTempFilter('objetivos', opcion)}
+                    style={[
+                      styles.opcionBtn,
+                      tempSelectedFilters.objetivos.includes(opcion) && styles.opcionSeleccionada
+                    ]}
+                  >
+                    <Text>{opcion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
 
               <TouchableOpacity style={styles.aplicarBtn} onPress={applyFilters}>
                 <Text style={styles.aplicarTexto}>Aplicar filtros</Text>
@@ -277,50 +385,46 @@ export default function SubReceta() {
             </View>
           </View>
         </Modal>
+
   
 
         <ScrollView style={styles.scrollView}>
-          {recetasFiltradas.length === 0 && (
+          {recetasFiltradas.length === 0 ? (
             <View style={styles.textReceiptContainer}>
               <Text style={styles.textReceipt}>
                 {filter === 'todas' ? 'Crea tu primera receta' : 'No hay sugerencias disponibles'}
               </Text>
             </View>
-          )}
-
-          {recetasFiltradas.map((receta) => (
-            <TouchableOpacity key={receta.id} onPress={() => navigation.navigate('DetalleReceta', { receta })}>
-              <View style={styles.recetaItem}>
-                {filter === 'todas' && (
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => eliminarReceta(receta.id)}
-                  >
-                    <Text style={styles.deleteButtonText}>🗑️</Text>
-                  </TouchableOpacity>
-                )}
-
-                <View style={styles.recetaContent}>
-                  <View style={styles.imageContainer}>
-                  {receta.image ? (
-                    typeof receta.image === 'string' ? (
-                      <Image source={{ uri: receta.image }} style={styles.image} />
-                    ) : (
-                      <Image source={receta.image} style={styles.image}/>
-                    )
-                  ) : (
-                    <Text style={styles.imageText}>Sin imagen</Text>
+          ) : (
+            recetasFiltradas.map((receta) => (
+              <TouchableOpacity key={receta.id} onPress={() => navigation.navigate('DetalleReceta', { receta })}>
+                <View style={styles.recetaItem}>
+                  {filter === 'todas' && (
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => eliminarReceta(receta.id)}
+                    >
+                      <Text style={styles.deleteButtonText}>🗑️</Text>
+                    </TouchableOpacity>
                   )}
-                  </View>
 
-                  <View style={styles.textContainer}>
-                    <Text style={styles.recetaTitle}>{receta.title || 'Sin título'}</Text>
-                    <Text style={styles.recetaSubtitle}>{receta.description || 'Sin descripción'}</Text>
+                  <View style={styles.recetaContent}>
+                    <View style={styles.imageContainer}>
+                      {receta.image ? (
+                        <Image source={{ uri: receta.image }} style={styles.image} />
+                      ) : (
+                        <Text style={styles.imageText}>Sin imagen</Text>
+                      )}
+                    </View>
+                    <View style={styles.textContainer}>
+                      <Text style={styles.recetaTitle}>{receta.title || 'Sin título'}</Text>
+                      <Text style={styles.recetaSubtitle}>{receta.description || 'Sin descripción'}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          )}
         </ScrollView>
       </View>
     </TouchableWithoutFeedback>
@@ -332,6 +436,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'flex-start',
+    marginBottom: 50
   },
   crearButton: {
     backgroundColor: '#C7F2E6',
@@ -478,10 +583,15 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 20
+    padding: 20,
+    height: '80%',
+
+  },
+  scrollableModal: {
   },
   seccionTitulo: {
     fontSize: 16,
+    color: '#2F5D8C',
     fontWeight: 'bold',
     marginBottom: 10
   },
