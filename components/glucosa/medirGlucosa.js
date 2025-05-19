@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  StyleSheet
+  StyleSheet,
+  Modal
 } from 'react-native';
 import { getAuth } from 'firebase/auth';
 import {
@@ -27,6 +28,8 @@ export default function MedirGlucosa() {
   const [nota, setNota] = useState('');
   const [glucosas, setGlucosas] = useState([]);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [tempHora, setTempHora] = useState(new Date());
+  const [modalVisible, setModalVisible] = useState(false);
 
   const navigation = useNavigation();
 
@@ -80,31 +83,58 @@ export default function MedirGlucosa() {
   };
 
   const seleccionarHora = (event, selectedTime) => {
-    setShowTimePicker(false);
     if (selectedTime) {
-      const formattedTime = moment(selectedTime).format('HH:mm');
-      setHora(formattedTime);
+      setTempHora(selectedTime);
     }
+  };
+
+  const abrirSelectorHora = () => {
+    setTempHora(hora ? moment(hora, 'HH:mm').toDate() : new Date());
+    setModalVisible(true);
+  };
+
+  const confirmarHora = () => {
+    setHora(moment(tempHora).format('HH:mm'));
+    setModalVisible(false);
   };
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.label}>Hora</Text>
-      <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker(true)}>
+      <TouchableOpacity style={styles.input} onPress={abrirSelectorHora}>
         <Text style={styles.inputText}>
           {hora ? hora : "Selecciona la hora"}
         </Text>
       </TouchableOpacity>
 
-      {showTimePicker && (
-        <DateTimePicker
-          mode="time"
-          value={hora ? moment(hora, 'HH:mm').toDate() : new Date()}
-          is24Hour={true}
-          display="spinner"
-          onChange={seleccionarHora}
-        />
-      )}
+      {/* Modal para el selector de hora */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.label}>Selecciona la hora</Text>
+            <DateTimePicker
+              mode="time"
+              value={tempHora}
+              is24Hour={true}
+              display="spinner"
+              onChange={seleccionarHora}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButton} onPress={confirmarHora}>
+                <Text style={styles.confirmButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Text style={styles.label}>Nivel de glucosa (mg/dL)</Text>
       <TextInput
@@ -150,4 +180,37 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: { color: '#fff', fontWeight: 'bold' },
+
+  // Estilos del Modal
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#FF5C5C',
+    padding: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  confirmButton: {
+    backgroundColor: '#2F5D8C',
+    padding: 10,
+    borderRadius: 5,
+  },
+  cancelButtonText: { color: '#fff' },
+  confirmButtonText: { color: '#fff' },
 });
