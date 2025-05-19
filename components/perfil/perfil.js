@@ -5,19 +5,18 @@ import { getAuth, signOut  } from 'firebase/auth';
 import { FIREBASE_DB } from '../../FirebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
+import moment from 'moment';
+import { agregarSugerenciasComidaGlobales } from '../dieta/cargarSugerencias';
 
 
 
 export default function Perfil() {
   const [usuario, setUsuario] = useState(null);
-
-  const objetivosDelMes = [
-    'Ir al gimnasio 3 veces por semana',
-    'Beber 2L de agua al día',
-    'Evitar azúcar procesado'
-  ];
+  const [objetivos, setObjetivos] = useState([]);
+  const navigation = useNavigation();
 
   useEffect(() => {
+
     const cargarDatosUser = async () => {
       const auth = getAuth();
       const user = auth.currentUser;
@@ -35,7 +34,40 @@ export default function Perfil() {
       
     };
     cargarDatosUser();
+    cargarObjetivos();
   }, []);
+
+  const cargarObjetivos = async () => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    console.log("Usuario no autenticado");
+    return;
+  }
+
+  const mesActual = moment().format('MMMM');
+  const refObjetivos = doc(FIREBASE_DB, 'Objetivos Mensuales', `${user.uid}_${mesActual}`);
+  console.log("Buscando objetivos en:", `${user.uid}_${mesActual}`);
+
+  try {
+    const getRefDoc = await getDoc(refObjetivos);
+
+    if (getRefDoc.exists()) {
+      const data = getRefDoc.data();
+      console.log("Datos del documento:", data);
+      setObjetivos(data.objetivos || []);
+    } else {
+      console.log('No se encontraron objetivos del usuario para este mes.');
+      setObjetivos([]);
+    }
+  } catch (error) {
+    console.error("Error al cargar objetivos:", error);
+  }
+};
+
+
+
 
   return (
     <ScrollView style={styles.container}>
@@ -80,15 +112,20 @@ export default function Perfil() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Objetivos de este mes</Text>
-        {objetivosDelMes.map((objetivo, i) => (
-          <Text key={i} style={styles.infoText}>- {objetivo}</Text>
-        ))}
+        <Text style={styles.sectionTitle} onPress={agregarSugerenciasComidaGlobales}>Objetivos de este mes</Text>
+        {objetivos.length > 0 ? (
+          objetivos.map((objetivo, i) => (
+            <Text key={i} style={styles.infoText}>- {objetivo}</Text>
+          ))
+        ) : (
+          <Text style={styles.infoText}>No tienes objetivos para este mes.</Text>
+        )}
 
-        <TouchableOpacity style={styles.botonSecundario}>
+        <TouchableOpacity style={styles.botonSecundario} onPress={() => navigation.navigate('GestionarObjetivos')}>
           <Text style={styles.botonSecundarioTexto}>Gestionar objetivos</Text>
         </TouchableOpacity>
       </View>
+
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.editButton}>
