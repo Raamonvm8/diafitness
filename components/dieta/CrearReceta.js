@@ -210,12 +210,13 @@ const CrearRecetaScreen = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: 'llama3',
-              prompt: `Clasifica el objetivo nutricional de esta receta: "${description}", "${ingredientesString}". Devuelve estrictamente un array JSON llamado "objetivos" con los elementos seleccionados de: ["Alta en proteínas", "Baja en calorías", "Alta en calorías", "Alta en carbohidratos", "Baja en carbohidratos", "Bajo índice glucémico", "Alta en fibra", "Sin lactosa", "Sin gluten", "Vegana", "Vegetariana"].
+              prompt: `Clasifica el objetivo nutricional de esta receta: "${description}", "${ingredientesString}". Devuelve estrictamente un array JSON llamado "objetivos" con los elementos seleccionados de: ["Alta en proteínas", "Baja en calorías", "Alta en calorías", "Baja en grasas", "Alta en carbohidratos", "Baja en carbohidratos", "Bajo índice glucémico", "Alta en fibra", "Sin lactosa", "Sin gluten", "Vegana", "Vegetariana"].
 
 Solo incluye los elementos que realmente correspondan según los ingredientes y cantidades. Evalúa los valores por ración (según el número de personas). Utiliza las siguientes reglas aproximadas:
 
 - "Alta en proteínas" si contiene más de 20 g de proteína por ración.
 - "Alta en calorías" si supera 600 kcal por ración. "Baja en calorías" si es menor de 400 kcal por ración.
+- "Baja en grasas" si no supera los 8 g de grasa por ración.
 - "Alta en carbohidratos" si tiene más de 40 g de carbohidratos por ración. "Baja en carbohidratos" si tiene menos de 20 g.
 - "Bajo índice glucémico" si todos los carbohidratos provienen de legumbres, vegetales, frutas bajas en azúcar o cereales integrales.
 - "Alta en fibra" si tiene más de 7 g de fibra por ración.

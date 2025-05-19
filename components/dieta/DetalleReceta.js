@@ -21,8 +21,9 @@ export default function DetalleReceta() {
 
   const [title, setTitle] = useState(receta.title);
   const [description, setDescription] = useState(receta.description);
-  const [ingredients, setIngredients] = useState(receta.ingredients || []);
-  const [steps, setSteps] = useState(receta.steps || []);
+  const [ingredients, setIngredients] = useState(receta.ingredientes || receta.ingredients || []);
+  const [steps, setSteps] = useState(receta.steps || receta.pasos || []);
+  const [duracion, setDuracion] = useState(receta.duración || 0);
   const [isEditing, setIsEditing] = useState(false);
 
   const [nuevoNombre, setNuevoNombre] = useState('');
@@ -189,6 +190,17 @@ export default function DetalleReceta() {
           </View>
         )
       ))}
+
+      <Text style={styles.label}>Duración:</Text>
+      {isEditing ? (
+        <TextInput
+          style={styles.input}
+          value={duracion}
+          onChangeText={setDuracion}
+        />
+      ) : (
+        <Text style={styles.text}>{duracion} min</Text>
+      )}
 
       {isEditing ? (
         <TouchableOpacity style={styles.button} onPress={handleSave}>
