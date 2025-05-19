@@ -11,3 +11,11 @@ comando para proyecto esqueleto desde 0:
 
 comando lanzar en android emulator:
  - npx expo run:android
+
+
+Ejecutar app en mi IOS:
+- npx expo install expo-dev-client
+- npx expo prebuild
+- npx eas build --platform ios
+- Cuando termine el build, recibirás un enlace para descargar la app.
+- Instala esa app en tu iPhone (usando TestFlight o directamente si tienes permisos).

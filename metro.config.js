@@ -2,6 +2,27 @@
 const { getDefaultConfig } = require('expo/metro-config');
 
 /** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+module.exports = (() => {
+  const config = getDefaultConfig(__dirname);
 
-module.exports = config;
+  const { transformer, resolver } = config;
+
+  // Soporte para SVG
+  config.transformer = {
+    ...transformer,
+    babelTransformerPath: require.resolve('react-native-svg-transformer'),
+  };
+
+  config.resolver = {
+    ...resolver,
+    assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),
+    sourceExts: [...resolver.sourceExts, 'svg'],
+  };
+
+
+  // Compatibilidad con Firebase en Expo SDK 53
+  config.resolver.sourceExts.push('cjs');
+  config.resolver.unstable_enablePackageExports = false;
+
+  return config;
+})();

@@ -11,11 +11,14 @@ import Register from './components/login/register';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { FIREBASE_AUTH } from './FirebaseConfig';
+import { agregarSugerenciasComidaGlobales } from './components/dieta/cargarSugerencias';
 
 const AuthStack = createNativeStackNavigator();
 const AppStack = createNativeStackNavigator();
 
 function AuthStackScreen() {
+  useEffect(() => {
+  }, []);
   return (
     <AuthStack.Navigator>
       <AuthStack.Screen
