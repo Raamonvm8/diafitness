@@ -21,6 +21,8 @@ export default function Glucosa() {
 
   const [mostrarSelectorMes, setMostrarSelectorMes] = useState(false);
 
+  const [valorSeleccionado, setValorSeleccionado] = useState(null);
+
   const navigation = useNavigation();
 
   const obtenerUltimaFecha = () => {
@@ -67,7 +69,7 @@ export default function Glucosa() {
         }else{
           const primerDiaMesSeleccionado = moment(mesMostrado).startOf("month").format("dddd, DD [de] MMMM YYYY");
           setDiaMostrado(primerDiaMesSeleccionado);
-          console.log("Mostrando el primer día del mes y año seleccionados:", primerDiaMesSeleccionado);
+          //console.log("Mostrando el primer día del mes y año seleccionados:", primerDiaMesSeleccionado);
         }
         
       }
@@ -113,10 +115,10 @@ export default function Glucosa() {
         }],
       };
     } else if (filtro === "semana") {
-      moment.updateLocale('es', { week: { dow: 1 } }); // Considera el lunes como primer día de la semana
+      moment.updateLocale('es', { week: { dow: 1 } }); 
     
       const fechaSeleccionada = moment(semanaMostrada, "MMMM YYYY");
-      const fechaInicioSemana = fechaSeleccionada.startOf("week"); // Se asegura que siempre sea el lunes del mes
+      const fechaInicioSemana = fechaSeleccionada.startOf("week");
     
       const semanaLabels = [];
       const semanaData = [];
@@ -152,12 +154,10 @@ export default function Glucosa() {
       const diasLabels = [];
       const diasData = [];
   
-      // Inicializa el objeto para los días del mes
       for (let dia = 1; dia <= fechaFinMes.date(); dia++) {
         diasDelMes[dia] = [];
       }
   
-      // Filtrar solo los días con datos
       datosGlucosa.forEach(d => {
         const fechaDato = moment(d.fecha, "DD/MM/YYYY");
         if (fechaDato.isSameOrAfter(fechaInicioMes) && fechaDato.isSameOrBefore(fechaFinMes)) {
@@ -166,7 +166,6 @@ export default function Glucosa() {
         }
       });
   
-      // Solo agrega los días que tienen datos
       Object.keys(diasDelMes).forEach(dia => {
         if (diasDelMes[dia].length > 0) {
           diasLabels.push(dia);
@@ -176,7 +175,6 @@ export default function Glucosa() {
         }
       });
   
-      // Si no hay datos para mostrar, manejar el caso vacío
       if (diasLabels.length === 0) {
         diasLabels.push("Sin datos");
         diasData.push(0);
@@ -192,6 +190,7 @@ export default function Glucosa() {
   
 
   const cambiarFechaAnterior = () => {
+    setValorSeleccionado(null);
     if (filtro === "dia") {
       setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM").subtract(1, "days").format("dddd, DD [de] MMMM"));
     } else if (filtro === "semana") {
@@ -200,6 +199,7 @@ export default function Glucosa() {
   };
 
   const cambiarFechaSiguiente = () => {
+    setValorSeleccionado(null);
     if (filtro === "dia") {
       setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM").add(1, "days").format("dddd, DD [de] MMMM"));
     } else if (filtro === "semana") {
@@ -273,10 +273,41 @@ export default function Glucosa() {
                   }}
                   bezier
                   style={styles.grafica}
+                  onDataPointClick={(data) => {
+                    setValorSeleccionado({
+                      value: data.value,
+                      x: data.x,
+                      y: data.y
+                    });
+                  }}
+                  decorator={() => {
+                    if (valorSeleccionado) {
+                      return (
+                        <Text
+                          style={{
+                            position: "absolute",
+                            left: valorSeleccionado.x - 15,
+                            top: valorSeleccionado.y - 25,
+                            backgroundColor: "rgba(47, 93, 140, 0.8)",
+                            color: "#FFF",
+                            padding: 2,
+                            borderRadius: 5,
+                            fontSize: 12
+                          }}
+                        >
+                          {valorSeleccionado.value} mg/dL
+                        </Text>
+                      );
+                    }
+                    return null;
+                  }}
                 />
+                
               )}
+              
             </>
           )}
+          
   
           <View style={styles.filtrosContainer}>
             {["dia", "semana", "mes"].map((tipo) => (
