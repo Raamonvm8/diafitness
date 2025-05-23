@@ -33,6 +33,8 @@ const CrearRecetaScreen = () => {
   const [cantidadIngrediente, setCantidadIngrediente] = useState('');
   const [unidadMedida, setUnidadMedida] = useState('g');
   const [paso, setPaso] = useState('');
+  const [duracion, setDuracion] = useState('');
+
   const [objetivo, setObjetivo] = useState([]);
 
   const navigation = useNavigation();
@@ -295,7 +297,12 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
         </Picker>
         
       </View>
-      
+      <TextInput
+          placeholder="Duración (minutos)"
+          style={styles.input}
+          value={duracion}
+          onChangeText={setDuracion}
+        />
       <Text style={styles.titulo}>Describe la receta</Text>
       <View style={styles.ingredienteContainer}>
         <Text style={styles.subtitulo}>Ingredientes</Text>
@@ -374,6 +381,8 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
       {imagenURL && (
         <Image source={{ uri: imagenURL }} style={styles.imagen} />
       )}
+
+      
   
       <View style={styles.botonCentrado}>
         <TouchableOpacity
