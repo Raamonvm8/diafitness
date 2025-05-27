@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getAuth, signOut  } from 'firebase/auth';
@@ -7,7 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import moment from 'moment';
 import { agregarSugerenciasComidaGlobales } from '../dieta/cargarSugerencias';
-
+import { useFocusEffect } from '@react-navigation/native';
 
 
 export default function Perfil() {
@@ -36,6 +36,12 @@ export default function Perfil() {
     cargarDatosUser();
     cargarObjetivos();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarObjetivos();
+    }, [])
+  );
 
   const cargarObjetivos = async () => {
   const auth = getAuth();
