@@ -5,7 +5,7 @@ import { Dimensions } from "react-native";
 import Fondo from "../fondo";
 import moment from "moment";
 import { useNavigation } from '@react-navigation/native';
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { FIREBASE_DB } from "../../FirebaseConfig";
 import { getAuth } from "firebase/auth";
 import MonthYearPicker from 'react-native-month-year-picker';
@@ -18,6 +18,7 @@ export default function Glucosa() {
   const [semanaMostrada, setSemanaMostrada] = useState(moment().startOf("isoWeek"));
   const [datosGlucosa, setDatosGlucosa] = useState([]);
   const [mesMostrado, setMesMostrado] = useState(moment().startOf("month"));
+  const [idsDelDataset, setIdsDelDataset] = useState([]);
 
   const [mostrarSelectorMes, setMostrarSelectorMes] = useState(false);
 
@@ -86,7 +87,21 @@ export default function Glucosa() {
   }, [filtro, mesMostrado]);
   
   
-  
+  useEffect(() => {
+    if (filtro === "dia") {
+      const fechaSeleccionada = moment(diaMostrado, "dddd, DD [de] MMMM YYYY");
+
+      const datosDelDia = datosGlucosa
+        .filter(d => moment(d.fecha, "DD/MM/YYYY").isSame(fechaSeleccionada, "day"))
+        .sort((a, b) => moment(a.hora, "HH:mm").isBefore(moment(b.hora, "HH:mm")) ? -1 : 1);
+
+      const ids = datosDelDia.length > 0 ? datosDelDia.map(d => d.id) : [];
+      setIdsDelDataset(ids);
+    } else {
+      setIdsDelDataset([]); 
+    }
+  }, [datosGlucosa, filtro, diaMostrado, semanaMostrada, mesMostrado]);
+
   
 
   const procesarDatos = () => {
@@ -107,6 +122,8 @@ export default function Glucosa() {
       const dataset = datosDelDia.length > 0 
         ? datosDelDia.map(d => parseFloat(d.nivel) || 0) 
         : [0];
+
+      
   
       return {
         labels: labels,
@@ -126,7 +143,6 @@ export default function Glucosa() {
       for (let i = 0; i < 7; i++) {
         const dia = moment(fechaInicioSemana).add(i, "days");
     
-        // Verificamos que el día esté dentro del mes seleccionado
         if (dia.month() === fechaSeleccionada.month()) {
           semanaLabels.push(dia.format("dd (D)"));
     
@@ -192,7 +208,7 @@ export default function Glucosa() {
   const cambiarFechaAnterior = () => {
     setValorSeleccionado(null);
     if (filtro === "dia") {
-      setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM").subtract(1, "days").format("dddd, DD [de] MMMM"));
+      setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM YYYY").subtract(1, "days").format("dddd, DD [de] MMMM YYYY"));
     } else if (filtro === "semana") {
       setSemanaMostrada(prev => moment(prev).subtract(1, "week"));
     }
@@ -201,17 +217,27 @@ export default function Glucosa() {
   const cambiarFechaSiguiente = () => {
     setValorSeleccionado(null);
     if (filtro === "dia") {
-      setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM").add(1, "days").format("dddd, DD [de] MMMM"));
+      setDiaMostrado(prev => moment(prev, "dddd, DD [de] MMMM YYYY").add(1, "days").format("dddd, DD [de] MMMM YYYY"));
     } else if (filtro === "semana") {
       setSemanaMostrada(prev => moment(prev).add(1, "week"));
     } 
   };
-  
+
+  const eliminarDato = async (id) => {
+    console.log("se pulsa boton eliminar");
+    try {
+      const recetaRef = doc(FIREBASE_DB, 'glucosa', id);
+      await deleteDoc(recetaRef);
+      setValorSeleccionado(null);
+    } catch (error) {
+      console.error('Error eliminando dato:', error);
+    }
+  };
 
   return (
     <Fondo>
       <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.main}>
+        <ScrollView contentContainerStyle={styles.main} >
         <TouchableOpacity onPress={() => setMostrarSelectorMes(true)} style={styles.botonMes}>
             <Text style={styles.textoBoton}>{mesMostrado.format("MMMM YYYY")}</Text>
             <Text style={styles.textoBoton}>▼</Text>
@@ -233,56 +259,75 @@ export default function Glucosa() {
           )}
   
           {mostrarDatos && (
-            <>
-              <View style={styles.fechaNavigationContainer}>
-                <View style={styles.fechaNavigation}>
-                  {filtro !== "mes" && (
-                    <TouchableOpacity onPress={cambiarFechaAnterior} style={styles.arrowButton}>
-                      <Text style={styles.arrowText}>←</Text>
-                    </TouchableOpacity>
-                  )}
-                  <Text style={[styles.textoFiltro, { marginTop: 10, marginBottom: -10 }]}>
-                    {filtro === "dia" ? diaMostrado : filtro === "semana" ? `Semana del ${semanaMostrada.format("DD/MM/YYYY")}` : mesMostrado.format("MMMM YYYY")}
-                  </Text>
-                  {filtro !== "mes" && (
-                    <TouchableOpacity onPress={cambiarFechaSiguiente} style={styles.arrowButton}>
-                      <Text style={styles.arrowText}>→</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <TouchableOpacity style={styles.botonMedir} onPress={() => navigation.navigate('MedirGlucosa')}>
-                  <Text style={styles.textoBoton}>+ Medir</Text>
-                </TouchableOpacity>
+          <>
+            <View style={styles.fechaNavigationContainer}>
+              <View style={styles.fechaNavigation}>
+                {filtro !== "mes" && (
+                  <TouchableOpacity onPress={cambiarFechaAnterior} style={styles.arrowButton}>
+                    <Text style={styles.arrowText}>←</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={[styles.textoFiltro, { marginTop: 10, marginBottom: -10 }]}>
+                  {filtro === "dia"
+                    ? diaMostrado
+                    : filtro === "semana"
+                    ? `Semana del ${semanaMostrada.format("DD/MM/YYYY")}`
+                    : mesMostrado.format("MMMM YYYY")}
+                </Text>
+                {filtro !== "mes" && (
+                  <TouchableOpacity onPress={cambiarFechaSiguiente} style={styles.arrowButton}>
+                    <Text style={styles.arrowText}>→</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-  
-              {procesarDatos() && (
-                <LineChart
-                  data={procesarDatos()}
-                  width={Dimensions.get("window").width - 40}
-                  height={230}
-                  chartConfig={{
-                    backgroundColor: "#FFFFFF",
-                    backgroundGradientFrom: "#E0F0FF",
-                    backgroundGradientTo: "#C7F2E6",
-                    decimalPlaces: 1,
-                    propsForLabels: {
-                      fontSize: 9,
-                      fontWeight: "bold",
-                    },
-                    color: (opacity = 1) => `rgba(47, 93, 140, ${opacity})`,
-                  }}
-                  bezier
-                  style={styles.grafica}
-                  onDataPointClick={(data) => {
-                    setValorSeleccionado({
-                      value: data.value,
-                      x: data.x,
-                      y: data.y
-                    });
-                  }}
-                  decorator={() => {
-                    if (valorSeleccionado) {
-                      return (
+
+              <TouchableOpacity
+                style={styles.botonMedir}
+                onPress={() => {
+                  const fechaSeleccionada =
+                    filtro === "dia"
+                      ? moment(diaMostrado, "dddd, DD [de] MMMM YYYY").format("YYYY-MM-DD")
+                      : moment().format("YYYY-MM-DD");
+
+                  navigation.navigate("MedirGlucosa", { fechaSeleccionada });
+                }}
+              >
+                <Text style={styles.textoBoton}>+ Medir</Text>
+              </TouchableOpacity>
+            </View>
+
+            {procesarDatos() && (
+            <>
+              <LineChart
+                data={procesarDatos()}
+                width={Dimensions.get("window").width - 40}
+                height={230}
+                chartConfig={{
+                  backgroundColor: "#FFFFFF",
+                  backgroundGradientFrom: "#E0F0FF",
+                  backgroundGradientTo: "#C7F2E6",
+                  decimalPlaces: 1,
+                  propsForLabels: {
+                    fontSize: 9,
+                    fontWeight: "bold",
+                  },
+                  color: (opacity = 1) => `rgba(47, 93, 140, ${opacity})`,
+                }}
+                bezier
+                style={styles.grafica}
+                onDataPointClick={(data) => {
+                  const id = idsDelDataset[data.index];
+                  setValorSeleccionado({
+                    value: data.value,
+                    x: data.x,
+                    y: data.y,
+                    index: data.index,
+                    id: id
+                  });
+                }}
+                decorator={() => {
+                  if (valorSeleccionado) {
+                    return (
                         <Text
                           style={{
                             position: "absolute",
@@ -292,21 +337,42 @@ export default function Glucosa() {
                             color: "#FFF",
                             padding: 2,
                             borderRadius: 5,
-                            fontSize: 12
+                            fontSize: 12,
                           }}
                         >
                           {valorSeleccionado.value} mg/dL
                         </Text>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                
-              )}
-              
+                    );
+                  }
+                  return null;
+                }}
+              />
+              {valorSeleccionado && (
+              <TouchableOpacity
+                style={{
+                  position: "absolute",
+                  left: valorSeleccionado.x - 30,
+                  top: valorSeleccionado.y + 175,
+                  backgroundColor: "#FF5C5C",
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  zIndex: 10,
+                  elevation: 5,
+                }}
+                onPress={() => {
+                  eliminarDato(valorSeleccionado.id);
+                }}
+              >
+                <Text style={{ color: "#FFF", fontSize: 10 }}>Eliminar</Text>
+              </TouchableOpacity>
+            )}
             </>
           )}
+
+          </>
+        )}
+
           
   
           <View style={styles.filtrosContainer}>

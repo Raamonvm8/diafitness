@@ -21,6 +21,10 @@ import { FIREBASE_DB } from '../../FirebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
+import { Platform } from 'react-native';
+import Recomendaciones from './recomendaciones';
+import { useRoute } from '@react-navigation/native';
+
 
 export default function MedirGlucosa() {
   const [hora, setHora] = useState('');
@@ -30,6 +34,9 @@ export default function MedirGlucosa() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempHora, setTempHora] = useState(new Date());
   const [modalVisible, setModalVisible] = useState(false);
+  const [mensajeRecomendación, setMensajeRecomendación] = useState('');
+  const route = useRoute();
+  const fechaSeleccionada = route.params?.fechaSeleccionada || moment().format("YYYY-MM-DD");
 
   const navigation = useNavigation();
 
@@ -52,6 +59,14 @@ export default function MedirGlucosa() {
     return () => unsubscribe();
   }, []);
 
+  const generarRecomendacion = (nivelGlucosa, hora) => {
+    const glucosa = parseInt(nivelGlucosa);
+    if (glucosa < 70) return "Tu nivel de glucosa es bajo. Come algo dulce inmediatamente.";
+    if (glucosa > 180) return "Tu nivel de glucosa es alto. Revisa tu medicación o consulta al médico.";
+    return "Tu nivel de glucosa está dentro del rango normal. ¡Buen trabajo!";
+  };
+
+
   const guardarGlucosa = async () => {
     const auth = getAuth();
     const user = auth.currentUser;
@@ -63,16 +78,16 @@ export default function MedirGlucosa() {
     }
 
     try {
-      await addDoc(collection(FIREBASE_DB, 'glucosa'), {
-        fecha: new Date().toISOString().split('T')[0],
-        hora,
-        nivelGlucosa,
-        nota,
-        createdAt: new Date(),
+      await addDoc(collection(FIREBASE_DB, "glucosa"), {
         userId: user.uid,
+        fecha: fechaSeleccionada, 
+        hora: moment().format("HH:mm"),
+        nivelGlucosa: nivelGlucosa,
+        nota: nota,
+        createdAt: new Date()
       });
-
-      Alert.alert("Éxito", "Glucosa guardada correctamente.");
+      const mensaje = generarRecomendacion(nivelGlucosa, hora);
+      Alert.alert("Éxito", mensaje);
       setHora('');
       setNivelGlucosa('');
       setNota('');
@@ -82,16 +97,18 @@ export default function MedirGlucosa() {
     }
   };
 
-  const seleccionarHora = (event, selectedTime) => {
-    if (selectedTime) {
-      setTempHora(selectedTime);
-    }
-  };
+  
+
 
   const abrirSelectorHora = () => {
     setTempHora(hora ? moment(hora, 'HH:mm').toDate() : new Date());
-    setModalVisible(true);
+    if (Platform.OS === 'android') {
+      setShowTimePicker(true);
+    } else {
+      setModalVisible(true); 
+    }
   };
+
 
   const confirmarHora = () => {
     setHora(moment(tempHora).format('HH:mm'));
@@ -107,34 +124,56 @@ export default function MedirGlucosa() {
         </Text>
       </TouchableOpacity>
 
-      {/* Modal para el selector de hora */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.label}>Selecciona la hora</Text>
-            <DateTimePicker
-              mode="time"
-              value={tempHora}
-              is24Hour={true}
-              display="spinner"
-              onChange={seleccionarHora}
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={confirmarHora}>
-                <Text style={styles.confirmButtonText}>Confirmar</Text>
-              </TouchableOpacity>
+      {Platform.OS === 'ios' ? (
+        <Modal
+          visible={modalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.label}>Selecciona la hora</Text>
+              <DateTimePicker
+                mode="time"
+                value={tempHora}
+                is24Hour={true}
+                display="spinner"
+                onChange={(event, selectedTime) => {
+                  if (selectedTime) {
+                    setTempHora(selectedTime);
+                  }
+                }}
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.cancelButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.confirmButton} onPress={confirmarHora}>
+                  <Text style={styles.confirmButtonText}>Confirmar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      ) : (
+        showTimePicker && (
+          <DateTimePicker
+            mode="time"
+            value={tempHora}
+            is24Hour={true}
+            display="spinner"
+            onChange={(event, selectedTime) => {
+              setShowTimePicker(false); 
+
+              if (event.type === "set" && selectedTime) {
+                setHora(moment(selectedTime).format('HH:mm'));
+              }
+            }}
+          />
+        )
+      )}
+
 
       <Text style={styles.label}>Nivel de glucosa (mg/dL)</Text>
       <TextInput
@@ -181,7 +220,6 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: '#fff', fontWeight: 'bold' },
 
-  // Estilos del Modal
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
