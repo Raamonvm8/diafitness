@@ -15,14 +15,16 @@ import {
   where,
   query,
   onSnapshot,
-  collection
+  collection,
+  doc,
+  getDoc
 } from 'firebase/firestore';
 import { FIREBASE_DB } from '../../FirebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 import CrearRecetaScreen from './CrearReceta';
 
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const SECCIONES = ['Desayuno', 'Media Mañana', 'Almuerzo', 'Merienda', 'Cena'];
+const SECCIONES = ['Desayuno', 'Media Mañana', 'Comida', 'Merienda', 'Cena'];
 
 export default function CrearDieta() {
   const [title, setTitle] = useState('');
@@ -33,7 +35,11 @@ export default function CrearDieta() {
   const [diaActualIndex, setDiaActualIndex] = useState(0);
   const [seccionActual, setSeccionActual] = useState(SECCIONES[0]);
   const [mostrarMisComidas, setMostrarMisComidas] = useState(false);
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+
   const [comidas, setComidas] = useState([]);
+  const [sugerencias, setSugerencias] = useState([]);
+
   const [searchText, setSearchText] = useState('');
 
   const navigation = useNavigation();
@@ -52,35 +58,43 @@ export default function CrearDieta() {
       }));
       setComidas(comidasUsuario);
     });
-
+    cargarSugerencias();
     return () => unsubscribe();
   }, []);
 
-  const handleDiaChange = (index) => {
-    setDiaActualIndex(index);
-    setSeccionActual(SECCIONES[0]);
-    setComidaInput('');
-    setDetalleInput('');
-    setMostrarMisComidas(false);
-  };
-
-  const agregarComida = () => {
-    if (!comidaInput) {
-      Alert.alert("Error", "Introduce el nombre de la comida.");
-      return;
+  const cargarSugerencias = async ()  => {
+    const sugerenciasRef = doc(FIREBASE_DB, 'Sugerencias', 'comidas');
+    try {
+      const docSnap = await getDoc(sugerenciasRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data(); 
+        const todasLasSugerencias = data.sugerencias || [];
+        
+        setSugerencias(todasLasSugerencias);
+      } else {
+        console.log('El documento de sugerencias no existe');
+        setSugerencias([]);
+      }
+    } catch (error) {
+      console.error('Error al obtener sugerencias:', error);
     }
+  }
+  
 
-    const dia = DIAS[diaActualIndex];
-    const nuevaDieta = { ...dieta };
-    if (!nuevaDieta[dia]) nuevaDieta[dia] = {};
-    if (!nuevaDieta[dia][seccionActual]) nuevaDieta[dia][seccionActual] = [];
-
-    nuevaDieta[dia][seccionActual].push({ nombre: comidaInput, detalle: detalleInput });
-
-    setDieta(nuevaDieta);
-    setComidaInput('');
-    setDetalleInput('');
+  const mostrarComidasPorTipos = () => {
+    return comidas.filter(
+      (comida) =>
+        seccionActual.toLowerCase() === (comida.tipo?.toLowerCase() || '')
+    );
   };
+
+  const mostrarSugerenciasPorTipos = () => {
+    return sugerencias.filter(
+      (comida) =>
+        seccionActual.toLowerCase() === (comida.tipo?.toLowerCase() || '')
+    );
+  };
+
 
   const eliminarComida = (index) => {
     const dia = DIAS[diaActualIndex];
@@ -101,14 +115,26 @@ export default function CrearDieta() {
     if (!nuevaDieta[dia]) nuevaDieta[dia] = {};
     if (!nuevaDieta[dia][seccionActual]) nuevaDieta[dia][seccionActual] = [];
 
-    nuevaDieta[dia][seccionActual].push({
-      nombre: receta.title,
-      detalle: receta.description || ''
-    });
+    nuevaDieta[dia][seccionActual].push({ ...receta });
 
     setDieta(nuevaDieta);
     setSearchText('');
   };
+
+  const añadirComidaDesdeSugerencia = (sugerencia) => {
+    const dia = DIAS[diaActualIndex];
+    const nuevaDieta = { ...dieta };
+
+    if (!nuevaDieta[dia]) nuevaDieta[dia] = {};
+    if (!nuevaDieta[dia][seccionActual]) nuevaDieta[dia][seccionActual] = [];
+
+    nuevaDieta[dia][seccionActual].push({ ...sugerencia });
+
+    setDieta(nuevaDieta);
+    setSearchText('');
+  };
+
+
 
   const guardarDieta = async () => {
     if (Object.keys(dieta).length < 7) {
@@ -187,41 +213,30 @@ export default function CrearDieta() {
         ))}
       </ScrollView>
 
-      {/*<View style={styles.inputRow}>
-        <TextInput
-          style={[styles.input, { flex: 1 }]}
-          placeholder="Nombre comida"
-          value={comidaInput}
-          onChangeText={setComidaInput}
-        />
-        <TextInput
-          style={[styles.input, { flex: 1 }]}
-          placeholder="Detalle (opcional)"
-          value={detalleInput}
-          onChangeText={setDetalleInput}
-        />
-        <TouchableOpacity style={styles.botonVerde} onPress={agregarComida}>
-          <Text style={styles.diaTexto}>Añadir</Text>
-        </TouchableOpacity>
-      </View>  */}
+      
 
       {dieta[DIAS[diaActualIndex]]?.[seccionActual]?.map((comida, i) => (
-        <View key={i} style={[styles.comidaItem, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-          <Text style={{ color: '#2F5D8C' }}>🍽 {comida.nombre} - {comida.detalle}</Text>
-          <TouchableOpacity onPress={() => eliminarComida(i)}>
-            <Text style={{ color: 'red', fontWeight: 'bold' }}>Eliminar</Text>
+        <View key={i} style={styles.comidaItem}>
+          <Text style={styles.comidaTexto}>🍽 {comida.title} - {comida.description}</Text>
+          <TouchableOpacity style={styles.botonEliminar} onPress={() => eliminarComida(i)}>
+            <Text style={styles.textoEliminar}>Eliminar</Text>
           </TouchableOpacity>
         </View>
       ))}
 
+
       <View style={{marginVertical: 30, flexDirection: 'row', justifyContent: 'center', gap:10}} >
         <TouchableOpacity style={styles.botonAzul} onPress={() => setMostrarMisComidas(!mostrarMisComidas)}>
-          <Text style={styles.botonTexto}>Ver mis {seccionActual}s</Text>
+          <Text style={styles.botonTexto}>Mis {seccionActual}s</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.botonAzul} onPress={ () => navigation.navigate('CrearReceta')}>
-          <Text style={styles.botonTexto}>Crear {seccionActual}</Text>
+        <TouchableOpacity style={styles.botonAzul} onPress={() => setMostrarSugerencias(!mostrarSugerencias)}>
+          <Text style={styles.botonTexto}>Sugerencias de {seccionActual}s</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.crearDesayuno} onPress={ () => navigation.navigate('CrearReceta')}>
+          <Text style={styles.diaTexto}> + Crear</Text>
         </TouchableOpacity>
       </View>
+      
       
 
       {mostrarMisComidas && (
@@ -233,12 +248,47 @@ export default function CrearDieta() {
             onChangeText={setSearchText}
           />
 
-          {comidas
+          {mostrarComidasPorTipos()
             .filter(receta =>
               receta.title.toLowerCase().includes(searchText.toLowerCase())
             )
             .map((receta) => (
-              <TouchableOpacity key={receta.id} onPress={() => {añadirComidaDesdeReceta(receta); setMostrarMisComidas(!mostrarMisComidas);} }>
+              <TouchableOpacity key={receta.id} onPress={() => {añadirComidaDesdeReceta(receta); setMostrarMisComidas(!mostrarMisComidas) }}>
+                <View style={styles.recetaItem}>
+                  <View style={styles.recetaContent}>
+                    <View style={styles.imageContainer}>
+                      {receta.image ? (
+                        <Image source={{ uri: receta.image }} style={styles.image} />
+                      ) : (
+                        <Text style={styles.imageText}>Sin imagen</Text>
+                      )}
+                    </View>
+                    <View style={styles.textContainer}>
+                      <Text style={styles.recetaTitle}>{receta.title || 'Sin título'}</Text>
+                      <Text style={styles.recetaSubtitle}>{receta.description || 'Sin descripción'}</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+        </View>
+      )}
+
+      {mostrarSugerencias && (
+        <View style={styles.misComidas}>
+          <TextInput
+            style={styles.input}
+            placeholder="Buscar comida..."
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+
+          {mostrarSugerenciasPorTipos()
+            .filter(receta =>
+              receta.title.toLowerCase().includes(searchText.toLowerCase())
+            )
+            .map((receta) => (
+              <TouchableOpacity key={receta.id} onPress={() => {añadirComidaDesdeSugerencia(receta); setMostrarSugerencias(!mostrarSugerencias)} }>
                 <View style={styles.recetaItem}>
                   <View style={styles.recetaContent}>
                     <View style={styles.imageContainer}>
@@ -282,10 +332,37 @@ const styles = StyleSheet.create({
   seccionTexto: { color: '#2F5D8C', fontWeight: 'bold' },
   inputRow: { flexDirection: 'row', gap: 5, marginBottom: 10 },
   botonVerde: { backgroundColor: '#C7F2E6', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
-  botonAzul: { backgroundColor: '#2F5D8C', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 10 },
+  botonAzul: { backgroundColor: '#2F5D8C', padding: 12, borderRadius: 10, alignItems: 'center', marginBottom: 10, maxWidth: 150 },
   botonSiguiente: { backgroundColor: '#2F5D8C', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 20 },
-  botonTexto: { color: '#FFFFFF', fontWeight: 'bold' },
-  comidaItem: { backgroundColor: '#E0F0FF', padding: 8, borderRadius: 6, marginBottom: 5 },
+  botonTexto: { color: '#FFFFFF', fontWeight: 'bold', textAlign: 'center', alignItems: 'center' },
+  comidaItem: {
+    backgroundColor: '#F0F8FF',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },  
+  comidaTexto: {
+    flex: 1,
+    color: '#2F5D8C',
+    marginRight: 10,
+    fontSize: 14,
+  },
+
+  botonEliminar: {
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+
+  textoEliminar: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
   recetaItem: { backgroundColor: '#F5F5F5', borderRadius: 10, marginBottom: 10, overflow: 'hidden' },
   recetaContent: { flexDirection: 'row' },
   imageContainer: { width: 100, height: 100, backgroundColor: '#CCC', justifyContent: 'center', alignItems: 'center' },
@@ -312,5 +389,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2F5D8C',
   },
+  crearDesayuno: {
+    backgroundColor: '#C7F2E6', padding: 12, borderRadius: 10, alignItems: 'center', alignSelf: 'center', marginBottom: 10, width: '20%'
+  }
   
 });

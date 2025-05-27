@@ -137,7 +137,7 @@ export default function SubDieta() {
         />
         <TouchableOpacity
           onLayout={handleDropdownToggle}
-          onPress={() => setDropdownVisible(prevState => !prevState)} // No cambia la lógica del toggle, solo se asegura el control manual
+          onPress={() => setDropdownVisible(prevState => !prevState)} 
           style={styles.dropdownButton}
         >
           <Text style={styles.dropdownButtonText}>
@@ -177,7 +177,7 @@ export default function SubDieta() {
         )}
 
         {filteredDietas.map((dieta, index) => (
-          <React.Fragment key={dieta.id}>
+          <TouchableOpacity key={dieta.id} onPress={() => navigation.navigate('DetalleDieta', { dieta })}>
             <View style={[styles.dietaItem, dieta.isCurrent && styles.dietaItemActual]}>
               <TouchableOpacity
                 style={styles.deleteButton}
@@ -190,7 +190,7 @@ export default function SubDieta() {
                 onPress={() => marcarComoActual(dieta.id)}
                 style={styles.selectButton}
               >
-                <Text style={styles.selectButtonText}>{dieta.isCurrent ? '✅' : '📌'}</Text>
+                <Text style={styles.selectButtonText}>{dieta.isCurrent ? '🏅' : '📌'}</Text>
               </TouchableOpacity>
 
               <View style={styles.dietaTextContainer}>
@@ -202,7 +202,7 @@ export default function SubDieta() {
             {dieta.isCurrent && index < filteredDietas.length - 1 && (
               <View style={styles.separator} />
             )}
-          </React.Fragment>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
@@ -261,8 +261,8 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   selectButtonText: {
-    fontSize: 13,
-    color: 'white',
+    fontSize: 19,
+    color: 'yellow',
   },
   dietaTextContainer: {
     paddingRight: 30,

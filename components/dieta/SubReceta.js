@@ -18,6 +18,7 @@ import { FIREBASE_DB } from '../../FirebaseConfig';
 import DetalleReceta from './DetalleReceta';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import platoDefecto from '../../assets/platoharvard.png';
 
 
 
@@ -33,15 +34,18 @@ export default function SubReceta() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState({
     tipoComida: [],
-    objetivos: []
+    objetivos: [],
+    duración: []
   });
   const FILTERS = {
     tipoComida: ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena'],
-    objetivos: ['Baja en calorías', 'Alta en proteínas', 'Alta en carbohidratos', 'Baja en grasas', 'Bajo índice glucémico', 'Sin gluten', 'Vegana', 'Vegetariana', 'Alta en fibra', 'Sin lactosa']
+    objetivos: ['Baja en calorías', 'Alta en proteínas', 'Alta en carbohidratos', 'Baja en grasas', 'Bajo índice glucémico', 'Sin gluten', 'Vegana', 'Vegetariana', 'Alta en fibra', 'Sin lactosa'],
+    duración: ['0-5 min', '10-20 min', '30-45 min', '60+ min']
   };
   const [tempSelectedFilters, setTempSelectedFilters] = useState({
     tipoComida: [],
-    objetivos: []
+    objetivos: [],
+    duración: []
   });
   
   const [sugerenciasCargadas, setSugerenciasCargadas] = useState(false);
@@ -118,10 +122,19 @@ export default function SubReceta() {
     }
   }, [selectedFilters, filter]);
 
+  const cumpleFiltroDuracion = (receta) => {
+    if (selectedFilters.duración.length === 0) return true;
+
+    const duracionReceta = Number(receta.duración);
+    return selectedFilters.duración.some((duracionTexto) => {
+      const [min, max] = obtenerRangoDuracion(duracionTexto);
+      return !isNaN(duracionReceta) && duracionReceta >= min && duracionReceta <= max;
+    });
+  };
 
 
   const llamarFiltrosMisComidas = (recetas) => {
-    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0) {
+    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0 && selectedFilters.duración.length) {
       console.log("NO hay filtros");
       setRecetas(recetas);
     } else {
@@ -141,15 +154,30 @@ export default function SubReceta() {
             )
           : false;
 
+        const coincideDuracion = cumpleFiltroDuracion(receta);
+
         console.log(`Receta: ${receta.title} - Tipo: ${receta.tipo} - Coincide Tipo: ${coincideTipo} - Coincide Objetivo: ${coincideObjetivo}`);
 
-        if (selectedFilters.tipoComida.length > 0 && selectedFilters.objetivos.length > 0) {
+        if (
+          selectedFilters.tipoComida.length > 0 &&
+          selectedFilters.objetivos.length > 0 &&
+          selectedFilters.duración.length > 0
+        ) {
+          return coincideTipo && coincideObjetivo && coincideDuracion;
+        } else if (selectedFilters.tipoComida.length > 0 && selectedFilters.objetivos.length > 0) {
           return coincideTipo && coincideObjetivo;
+        } else if (selectedFilters.tipoComida.length > 0 && selectedFilters.duración.length > 0) {
+          return coincideTipo && coincideDuracion;
+        } else if (selectedFilters.objetivos.length > 0 && selectedFilters.duración.length > 0) {
+          return coincideObjetivo && coincideDuracion;
         } else if (selectedFilters.tipoComida.length > 0) {
           return coincideTipo;
         } else if (selectedFilters.objetivos.length > 0) {
           return coincideObjetivo;
+        } else if (selectedFilters.duración.length > 0) {
+          return coincideDuracion;
         }
+
       });
 
       setRecetas(recetasFiltradas);
@@ -157,7 +185,7 @@ export default function SubReceta() {
   };
 
   const llamarFiltrosMisSugerencias = (recetas) => {
-    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0) {
+    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0 && selectedFilters.duración.length === 0) {
       console.log("NO hay filtros");
       setSugerencias(recetas);
     } else {
@@ -168,6 +196,9 @@ export default function SubReceta() {
           selectedFilters.tipoComida
             .map(f => f.toLowerCase())
             .includes(receta.tipo.toLowerCase());
+          
+        const coincideDuracion = cumpleFiltroDuracion(receta);
+
 
         const coincideObjetivo = receta.objetivo?.objetivos && Array.isArray(receta.objetivo?.objetivos)
           ? selectedFilters.objetivos.every((objetivo) =>
@@ -179,18 +210,48 @@ export default function SubReceta() {
 
         console.log(`Receta: ${receta.title} - Tipo: ${receta.tipo} - Coincide Tipo: ${coincideTipo} - Coincide Objetivo: ${coincideObjetivo}`);
 
-        if (selectedFilters.tipoComida.length > 0 && selectedFilters.objetivos.length > 0) {
+        if (
+          selectedFilters.tipoComida.length > 0 &&
+          selectedFilters.objetivos.length > 0 &&
+          selectedFilters.duración.length > 0
+        ) {
+          return coincideTipo && coincideObjetivo && coincideDuracion;
+        } else if (selectedFilters.tipoComida.length > 0 && selectedFilters.objetivos.length > 0) {
           return coincideTipo && coincideObjetivo;
+        } else if (selectedFilters.tipoComida.length > 0 && selectedFilters.duración.length > 0) {
+          return coincideTipo && coincideDuracion;
+        } else if (selectedFilters.objetivos.length > 0 && selectedFilters.duración.length > 0) {
+          return coincideObjetivo && coincideDuracion;
         } else if (selectedFilters.tipoComida.length > 0) {
           return coincideTipo;
         } else if (selectedFilters.objetivos.length > 0) {
           return coincideObjetivo;
+        } else if (selectedFilters.duración.length > 0) {
+          return coincideDuracion;
         }
+        console.log(`Duración receta: ${receta.duración} (tipo: ${typeof receta.duración})`);
+
       });
 
       setSugerencias(recetasFiltradas);
     }
   };
+
+  const obtenerRangoDuracion = (duracionTexto) => {
+    switch (duracionTexto) {
+      case '0-5 min':
+        return [1, 5]; 
+      case '10-20 min':
+        return [10, 20];
+      case '30-45 min':
+        return [30, 45];
+      case '60+ min':
+        return [60, Infinity];
+      default:
+        return [0, Infinity]; 
+    }
+  };
+
 
 
   const cargarMisComidas = async () => {
@@ -373,6 +434,20 @@ export default function SubReceta() {
                     <Text>{opcion}</Text>
                   </TouchableOpacity>
                 ))}
+
+                <Text style={[styles.seccionTitulo, { marginTop: 20 }]}>Duración</Text>
+                {FILTERS.duración.map((opcion) => (
+                  <TouchableOpacity
+                    key={opcion}
+                    onPress={() => toggleTempFilter('duración', opcion)}
+                    style={[
+                      styles.opcionBtn,
+                      tempSelectedFilters.duración.includes(opcion) && styles.opcionSeleccionada
+                    ]}
+                  >
+                    <Text>{opcion}</Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
 
               <TouchableOpacity style={styles.aplicarBtn} onPress={applyFilters}>
@@ -413,7 +488,7 @@ export default function SubReceta() {
                       {receta.image ? (
                         <Image source={{ uri: receta.image }} style={styles.image} />
                       ) : (
-                        <Text style={styles.imageText}>Sin imagen</Text>
+                        <Image source={platoDefecto}  style={styles.image} />
                       )}
                     </View>
                     <View style={styles.textContainer}>
