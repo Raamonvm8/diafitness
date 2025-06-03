@@ -36,7 +36,7 @@ export default function MedirGlucosa() {
   const [modalVisible, setModalVisible] = useState(false);
   const [mensajeRecomendación, setMensajeRecomendación] = useState('');
   const route = useRoute();
-  const fechaSeleccionada = route.params?.fechaSeleccionada || moment().format("YYYY-MM-DD");
+  const fechaSeleccionada = route.params?.fechaSeleccionada || moment().format("DD-MM-YYYY");
 
   const navigation = useNavigation();
 
@@ -81,7 +81,7 @@ export default function MedirGlucosa() {
       await addDoc(collection(FIREBASE_DB, "glucosa"), {
         userId: user.uid,
         fecha: fechaSeleccionada, 
-        hora: moment().format("HH:mm"),
+        hora: hora,
         nivelGlucosa: nivelGlucosa,
         nota: nota,
         createdAt: new Date()
@@ -117,6 +117,11 @@ export default function MedirGlucosa() {
 
   return (
     <ScrollView style={styles.container}>
+      <View style={{alignItems: 'center', fontSize: 19}} >
+        <Text style={styles.labelDia}>Dia {fechaSeleccionada} </Text>
+      </View>
+      
+
       <Text style={styles.label}>Hora</Text>
       <TouchableOpacity style={styles.input} onPress={abrirSelectorHora}>
         <Text style={styles.inputText}>
@@ -164,12 +169,13 @@ export default function MedirGlucosa() {
             is24Hour={true}
             display="spinner"
             onChange={(event, selectedTime) => {
-              setShowTimePicker(false); 
-
+              setShowTimePicker(false);
               if (event.type === "set" && selectedTime) {
-                setHora(moment(selectedTime).format('HH:mm'));
+                setTempHora(selectedTime); 
+                setHora(moment(selectedTime).format('HH:mm')); 
               }
             }}
+
           />
         )
       )}
@@ -201,7 +207,8 @@ export default function MedirGlucosa() {
 
 const styles = StyleSheet.create({
   container: { padding: 20, backgroundColor: '#FFFFFF', flex: 1 },
-  label: { fontWeight: 'bold', marginTop: 10 },
+  label: { fontWeight: 'bold', marginTop: 10, color: '#2F5D8C' },
+  labelDia: { fontWeight: 'bold', marginTop: 10, color: '#2F5D8C', fontSize: 18 },
   input: {
     backgroundColor: '#E0F0FF',
     padding: 10,

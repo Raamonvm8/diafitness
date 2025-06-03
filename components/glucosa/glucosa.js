@@ -9,6 +9,7 @@ import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase
 import { FIREBASE_DB } from "../../FirebaseConfig";
 import { getAuth } from "firebase/auth";
 import MonthYearPicker from 'react-native-month-year-picker';
+import Header from '../header';
 
 
 export default function Glucosa() {
@@ -236,6 +237,7 @@ export default function Glucosa() {
 
   return (
     <Fondo>
+      <Header />
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.main} >
         <TouchableOpacity onPress={() => setMostrarSelectorMes(true)} style={styles.botonMes}>
@@ -317,13 +319,18 @@ export default function Glucosa() {
                 style={styles.grafica}
                 onDataPointClick={(data) => {
                   const id = idsDelDataset[data.index];
-                  setValorSeleccionado({
-                    value: data.value,
-                    x: data.x,
-                    y: data.y,
-                    index: data.index,
-                    id: id
-                  });
+                  if(valorSeleccionado){
+                    setValorSeleccionado(null);
+                  }else{
+                    setValorSeleccionado({
+                      value: data.value,
+                      x: data.x,
+                      y: data.y,
+                      index: data.index,
+                      id: id
+                    });
+                  }
+                  
                 }}
                 decorator={() => {
                   if (valorSeleccionado) {
@@ -437,7 +444,7 @@ const styles = StyleSheet.create({
   botonMedir: { backgroundColor: "#rgb(238, 148, 148)", padding: 5, borderRadius: 9, marginBottom: 7, marginTop: 15 },
   textoBoton: { color: "#FFFFFF", fontSize: 13, fontWeight: "bold" },
 
-  scrollTabla: { maxHeight: 160, width: "100%", backgroundColor: "#FFFFFF", borderBottomEndRadius: 10, borderBottomLeftRadius: 10 },
+  scrollTabla: { maxHeight: 220, width: "100%", backgroundColor: "#FFFFFF", borderBottomEndRadius: 10, borderBottomLeftRadius: 10 },
 
   tabla: { width: "100%" },
 
