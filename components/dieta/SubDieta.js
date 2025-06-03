@@ -22,6 +22,13 @@ export default function SubDieta() {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const navigation = useNavigation();
+  const daysWeek = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const currentNumberDay = new Date().getDay();
+  const currentDay = daysWeek[currentNumberDay];
+
+  const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+  const diaActualLetra = diasSemana[new Date().getDay()];
+
 
   useEffect(() => {
     const auth = getAuth();
@@ -115,6 +122,9 @@ export default function SubDieta() {
       }
     };
 
+  const dietaActual = dietas?.find(d => d.isCurrent);
+  const comidasDelDia = dietaActual?.dieta?.[diaActualLetra] || {};
+
   return (
     <TouchableWithoutFeedback onPress={closeDropdown}>
     <View style={styles.container}>
@@ -197,6 +207,49 @@ export default function SubDieta() {
                 <Text style={styles.dietaTitle}>{dieta.title || 'Sin título'}</Text>
                 <Text style={styles.dietaSubtitle}>{dieta.description || 'Sin descripción'}</Text>
               </View>
+              {dieta.isCurrent && (
+                <View style={styles.diaActualDieta}>
+                  <Text style={styles.currentTitle}>{currentDay} </Text>
+                  <View style={styles.tableContainer}>
+
+                    <View style={[styles.row, styles.header]}>
+                      <Text style={[styles.cell, styles.headerText, styles.cellBorder]}>Desayuno</Text>
+                      <Text style={[styles.cell, styles.mediaMañanaHeaderText, styles.cellBorder]}>Media Mañana</Text>
+                      <Text style={[styles.cell, styles.headerText, styles.cellBorder]}>Comida</Text>
+                      <Text style={[styles.cell, styles.headerText, styles.cellBorder]}>Merienda</Text>
+                      <Text style={[styles.cell, styles.headerText]}>Cena</Text>
+                    </View> 
+                      
+                    {(() => {
+                      const comidas = ['Desayuno', 'Media Mañana', 'Comida', 'Merienda', 'Cena'];
+
+                      const comidasArrays = comidas.map(comida => comidasDelDia?.[comida] || []);
+                      const maxLength = Math.max(...comidasArrays.map(arr => arr.length));
+
+                      const filas = Array.from({ length: maxLength }, (_, rowIndex) => {
+                        return (
+                          <View key={`row-${rowIndex}`} style={styles.row}>
+                            {comidasArrays.map((comidaArray, colIndex) => (
+                              <Text
+                                key={`cell-${rowIndex}-${colIndex}`}
+                                style={[
+                                  styles.cell,
+                                  styles.cellText,
+                                  colIndex < comidas.length - 1 ? styles.cellBorder : null,
+                                ]}
+                              >
+                                {comidaArray[rowIndex]?.title || '—'}
+                              </Text>
+                            ))}
+                          </View>
+                        );
+                      });
+
+                      return filas;
+                    })()}
+                  </View>         
+                </View>
+              )}
             </View>
 
             {dieta.isCurrent && index < filteredDietas.length - 1 && (
@@ -268,10 +321,24 @@ const styles = StyleSheet.create({
     paddingRight: 30,
     paddingLeft: 30,
   },
+  diaActualDieta:{
+    paddingRight: 5,
+    paddingLeft: 5,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginTop: 10
+  },
   dietaTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
+  },
+  currentTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2F5D8C',
+    alignSelf: 'center',
+    marginTop: 2
   },
   dietaSubtitle: {
     fontSize: 14,
@@ -334,4 +401,83 @@ const styles = StyleSheet.create({
     backgroundColor: '#fffafe',
     marginVertical: 20,
   },
+  row: {
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  row_comidas: {
+    flexDirection: 'column',
+    borderColor: 'white',
+    overflow: 'hidden',
+    textAlign: 'left'
+  },
+
+  
+  headerText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  mediaMañanaHeaderText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginTop: -6
+  },
+  headerTextBlue: {
+    color: '#2F5D8C',
+    fontWeight: 'bold',
+  },
+  mediaMañanaHeaderTextBlue: {
+    color: '#2F5D8C',
+    fontWeight: 'bold',
+    marginTop: -6
+  },
+  header: {
+    backgroundColor: '#2F5D8C',
+    borderTopLeftRadius: 8,
+    borderBottomLeftRightRadius: 8,
+  },
+  cell: {
+    flex: 1,
+    textAlign: 'center',
+    paddingVertical: 8,
+  },
+  cellBorder: {
+    borderRightWidth: 1,
+    borderRightColor: '#ddd',
+  },
+  headerText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  
+  cellText: {
+    flexWrap: 'wrap',
+    textAlign: 'left',
+    minWidth: 230, 
+    maxWidth: 200,
+    color: '#2F5D8C',
+    marginLeft: 10
+  },
+
+  currentTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2F5D8C',
+    alignSelf: 'center',
+    marginVertical: 10,
+  },
+  tableContainer: {
+    flexDirection: 'row',
+    borderWidth: 2,
+    borderColor: '#2F5D8C',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4, 
+  },
+
 });

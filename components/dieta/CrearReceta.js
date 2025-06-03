@@ -17,6 +17,8 @@ import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
+
 
 
 const CrearRecetaScreen = () => {
@@ -33,7 +35,7 @@ const CrearRecetaScreen = () => {
   const [cantidadIngrediente, setCantidadIngrediente] = useState('');
   const [unidadMedida, setUnidadMedida] = useState('g');
   const [paso, setPaso] = useState('');
-  const [duracion, setDuracion] = useState('');
+  const [duración, setDuracion] = useState('');
 
   const [objetivo, setObjetivo] = useState([]);
 
@@ -192,6 +194,7 @@ const CrearRecetaScreen = () => {
         ingredientes,
         pasos,
         image: imagenEnlace,
+        duración,
         createdAt: new Date(),
         userId: user.uid,
       };
@@ -259,6 +262,42 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
           console.error("Error al obtener y guardar el objetivo nutricional:", error);
         }
       }, 500);
+
+      setTimeout(async () => {
+        try {
+          const prompt = `Dime cuántas calorías tiene esta comida. Ten en cuenta que hay 5 comidas diarias. Haz una estimación equilibrada para que, con la suma de las 5 comidas, se acerque al máximo diario. Ninguna comida puede superar las 800 calorías. Usa valores medios entre 100 y 600. Devuélveme solo el número (en kcal), sin explicaciones ni texto adicional.
+                    Título: ${nombreReceta}
+                    Descripción: ${description}
+                    Ingredientes: ${ingredientesString}`
+
+          const response = await fetch('http://10.0.2.2:11434/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'llama3',
+              prompt: prompt,
+              stream: false
+            })
+          });
+  
+          const data = await response.json();
+          const match = data.response.match(/(\d+(\.\d+)?)/);
+  
+          if (match) {
+            const kcalValue = parseFloat(match[1]);
+            await updateDoc(doc(FIREBASE_DB, 'recetas', recetaRef.id), {
+              kcal: kcalValue, 
+            });
+            return kcalValue;
+          } else {
+            console.warn("No se pudo extraer un número de calorías válido:", data.response);
+            return 0;
+          }
+  
+        } catch (error) {
+          console.error("Error al obtener y guardar las kcal:", error);
+        }
+      }, 500);
   
     } catch (error) {
       console.error("Error al crear receta: ", error);
@@ -270,100 +309,112 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 120 }} style={styles.container}>
       
-      <TextInput
-        placeholder="Nombre de la comida"
-        style={styles.input}
-        value={nombreReceta}
-        onChangeText={setNombreReceta}
-      />
-      <TextInput
-        placeholder="Descripción"
-        style={styles.input}
-        value={description}
-        onChangeText={setDescription}
-      />
+      <View style={styles.seccion}>
 
-      <View style={styles.medidaDropdown}>
-        <Picker
-          selectedValue={tipo}
-          onValueChange={(value) => setTipo(value)}
-        >
-          <Picker.Item label="tipo de comida" value="tipo de comida" />
-          <Picker.Item label="desayuno" value="desayuno" />
-          <Picker.Item label="media mañana" value="media mañana" />
-          <Picker.Item label="comida" value="comida" />
-          <Picker.Item label="merienda" value="merienda" />
-          <Picker.Item label="cena" value="cena" />
-        </Picker>
-        
-      </View>
-      <TextInput
-          placeholder="Duración (minutos)"
+        <TextInput
+          placeholder="Nombre de la comida"
           style={styles.input}
-          value={duracion}
-          onChangeText={setDuracion}
+          value={nombreReceta}
+          onChangeText={setNombreReceta}
         />
-      <Text style={styles.titulo}>Describe la receta</Text>
-      <View style={styles.ingredienteContainer}>
-        <Text style={styles.subtitulo}>Ingredientes</Text>
-  
-        <View style={styles.row}>
-          <TextInput
-            placeholder="Ingrediente"
-            style={[styles.input, styles.inputSmall]}
-            value={nombreIngrediente}
-            onChangeText={setNombreIngrediente}
-          />
-          <TextInput
-            placeholder="Cantidad"
-            style={[styles.input, styles.inputSmall]}
-            value={cantidadIngrediente}
-            keyboardType="numeric"
-            onChangeText={setCantidadIngrediente}
-          />
-          <View style={styles.medidaDropdown}>
-            <Picker
-              selectedValue={unidadMedida}
-              onValueChange={(itemValue) => setUnidadMedida(itemValue)}
-            >
-              <Picker.Item label="g" value="g" />
-              <Picker.Item label="ml" value="ml" />
-              <Picker.Item label="unidad/es" value="unidades" />
-              <Picker.Item label="cucharada/s" value="cucharadas" />
-              <Picker.Item label="taza/s" value="tazas" />
-            </Picker>
-          </View>
-        </View>
-  
-        <View style={styles.botonCentrado}>
-          <TouchableOpacity style={styles.botonCustom} onPress={agregarIngrediente}>
-            <Text style={styles.botonCustomText}>Añadir ingrediente</Text>
-          </TouchableOpacity>
-        </View>
-  
-        {ingredientes.map((item, index) => (
-          <Text key={index} style={styles.ingredienteItem}>
-            {item.nombre}: {item.cantidad} {item.unidad}
-          </Text>
-        ))}
+        <TextInput
+          placeholder="Descripción"
+          style={styles.input}
+          value={description}
+          onChangeText={setDescription}
+        />
       </View>
-  
-      <View style={styles.pasosContainer}>
-        <Text style={styles.subtitulo}>Pasos</Text>
-        <View style={{flexDirection: 'row', gap: 20}} >
-          <TextInput
-            placeholder="Describe un paso"
-            style={styles.inputPaso}
-            value={paso}
-            onChangeText={setPaso}
-          />
-          <View >
-            <TouchableOpacity style={styles.botonCustomPaso} onPress={agregarPaso}>
-              <Text style={styles.botonCustomText}>Añadir</Text>
+
+      <View style={styles.seccion}>
+        <View style={styles.medidaDropdown}>
+          <Picker
+            selectedValue={tipo}
+            onValueChange={(value) => setTipo(value)}
+          >
+            <Picker.Item label="tipo de comida" value="tipo de comida" />
+            <Picker.Item label="desayuno" value="desayuno" />
+            <Picker.Item label="media mañana" value="media mañana" />
+            <Picker.Item label="comida" value="comida" />
+            <Picker.Item label="merienda" value="merienda" />
+            <Picker.Item label="cena" value="cena" />
+          </Picker>
+          
+        </View>
+        <TextInput
+          placeholder="Duración en minutos"
+          style={styles.input}
+          keyboardType="numeric"
+          value={duración.toString()}
+          onChangeText={(text) => {
+            const valorNumerico = parseInt(text, 10);
+            setDuracion(isNaN(valorNumerico) ? 0 : valorNumerico);
+          }}
+        />
+      </View>
+      <Text style={styles.titulo}>Describe la receta</Text>
+      
+      <View style={styles.seccion}>
+        <View style={styles.ingredienteContainer}>
+          <Text style={styles.subtitulo}>Ingredientes</Text>
+    
+          <View style={styles.row}>
+            <TextInput
+              placeholder="Ingrediente"
+              style={[styles.input, styles.inputSmall]}
+              value={nombreIngrediente}
+              onChangeText={setNombreIngrediente}
+            />
+            <TextInput
+              placeholder="Cantidad"
+              style={[styles.input, styles.inputSmall]}
+              value={cantidadIngrediente}
+              keyboardType="numeric"
+              onChangeText={setCantidadIngrediente}
+            />
+            <View style={styles.medidaDropdown}>
+              <Picker
+                selectedValue={unidadMedida}
+                onValueChange={(itemValue) => setUnidadMedida(itemValue)}
+              >
+                <Picker.Item label="g" value="g" />
+                <Picker.Item label="ml" value="ml" />
+                <Picker.Item label="unidad/es" value="unidades" />
+                <Picker.Item label="cucharada/s" value="cucharadas" />
+                <Picker.Item label="taza/s" value="tazas" />
+              </Picker>
+            </View>
+            <TouchableOpacity style={styles.botonCustom} onPress={agregarIngrediente}>
+              <Text style={styles.botonCustomText}>+</Text>
             </TouchableOpacity>
           </View>
-        </View>
         
+          
+    
+          {ingredientes.map((item, index) => (
+            <Text key={index} style={styles.ingredienteItem}>
+              {item.nombre}: {item.cantidad} {item.unidad}
+            </Text>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.seccion}>
+        <View style={styles.pasosContainer}>
+          <Text style={styles.subtitulo}>Pasos</Text>
+          <View style={{flexDirection: 'row', gap: 20}} >
+            <TextInput
+              placeholder="Describe un paso"
+              style={styles.inputPaso}
+              value={paso}
+              onChangeText={setPaso}
+            />
+            <View >
+              <TouchableOpacity style={styles.botonCustomPaso} onPress={agregarPaso}>
+                <Text style={styles.botonCustomText}> + </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
   
         {pasos.map((item, index) => (
           <Text key={index} style={styles.pasoItem}>
@@ -372,15 +423,17 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
         ))}
       </View>
   
-      <View style={styles.botonCentrado}>
-        <TouchableOpacity style={styles.botonCustom} onPress={mostrarOpciones}>
-          <Text style={styles.botonCustomText}>Subir imagen</Text>
+      <View style={styles.seccion}>
+        <Text style={styles.subtitulo}>Subir Imagen</Text>
+
+        <TouchableOpacity onPress={mostrarOpciones} style={styles.boton}>
+          <Ionicons name="cloud-upload-outline" size={24} color="white" />
         </TouchableOpacity>
+    
+        {imagenURL && (
+          <Image source={{ uri: imagenURL }} style={styles.imagen} />
+        )}
       </View>
-  
-      {imagenURL && (
-        <Image source={{ uri: imagenURL }} style={styles.imagen} />
-      )}
 
       
   
@@ -389,7 +442,7 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
           style={[styles.botonCustom, { marginTop: 30, width:150, height: 50, justifyContent: 'center', backgroundColor: '#C7F2E6' }]}
           onPress={guardarReceta}
         >
-          <Text style={[styles.botonCustomText, {color: '#2F5D8C'}]}>Guardar receta</Text>
+          <Text style={[styles.botonCustomText, {color: '#2F5D8C'}]}>Guardar</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -399,6 +452,8 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#ffff',
     padding: 20,
   },
   titulo: {
@@ -406,26 +461,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
+    color: '#2F5D8C'
   },
   subtitulo: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
+    textAlign: 'center',
+    color: '#2F5D8C'
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
-    borderRadius: 6,
     padding: 10,
     marginBottom: 10,
-    backgroundColor: '#fff',
+    borderRadius: 8,
+    backgroundColor: '#E0F0FF'
   },
   inputPaso: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 6,
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#E0F0FF',
     width: '78%'
   },
   inputSmall: {
@@ -445,7 +503,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 40,
     marginBottom: 10,
-    backgroundColor: '#E0F0FF'
+    backgroundColor: '#fff'
   },
   ingredienteContainer: {
     marginBottom: 20,
@@ -467,20 +525,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 15,
   },
+  boton: {
+    backgroundColor: '#2F5D8C',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  botonTexto: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
   botonCentrado: {
     alignItems: 'center',
     marginTop: 10,
   },
   botonCustom: {
     backgroundColor: '#2F5D8C',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
     borderRadius: 8,
+    marginBottom:10,
+    marginLeft: 10
   },
   botonCustomPaso: {
     backgroundColor: '#2F5D8C',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
     borderRadius: 8,
   },
   botonCustomText: {
@@ -488,6 +559,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center'
+  },
+  seccion: {
+    borderWidth: 1,
+    borderColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: '#f9f9f9',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
 

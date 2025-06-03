@@ -11,7 +11,7 @@ export default function DietaStack() {
   return (
     <Stack.Navigator >
       <Stack.Screen 
-        name="DietaScreen" 
+        name="Alimentación" 
         component={Dieta} 
         options={{ headerShown: false }} 
       />

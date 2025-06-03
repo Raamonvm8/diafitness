@@ -134,7 +134,7 @@ export default function SubReceta() {
 
 
   const llamarFiltrosMisComidas = (recetas) => {
-    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0 && selectedFilters.duración.length) {
+    if (selectedFilters.tipoComida.length === 0 && selectedFilters.objetivos.length === 0 && selectedFilters.duración.length===0) {
       console.log("NO hay filtros");
       setRecetas(recetas);
     } else {
@@ -356,52 +356,50 @@ export default function SubReceta() {
           <Text style={styles.crearButtonText}>+ Crear</Text>
         </TouchableOpacity>
 
-        <View style={styles.searchRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar receta..."
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-          <TouchableOpacity
-            onLayout={handleDropdownToggle}
-            onPress={() => setDropdownVisible(prevState => !prevState)}
-            style={styles.dropdownButton}
-          >
-            <Text style={styles.dropdownButtonText}>
-              {filter === 'todas' ? 'Mis Comidas' : 'Sugerencias'} ▼
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {dropdownVisible && (
-          <View
-            style={[styles.dropdownMenu, {
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              width: dropdownPosition.width,
-            }]}
-          >
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar receta..."
+              value={searchText}
+              onChangeText={setSearchText}
+            />
             <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => handleFilterSelection('todas')}
+              onLayout={handleDropdownToggle}
+              onPress={() => setDropdownVisible(prevState => !prevState)}
+              style={styles.dropdownButton}
             >
-              <Text>Mis Comidas</Text>
+              <Text style={styles.dropdownButtonText}>
+                {filter === 'todas' ? 'Mis Comidas' : 'Sugerencias'} ▼
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => handleFilterSelection('sugerencias')}
-            >
-              <Text>Sugerencias</Text>
+            <TouchableOpacity style={styles.filtroBtn} onPress={() => setModalVisible(true)}>
+              <Icon name="filter" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
-        )}
-        <View style={{ alignItems: 'center', marginBottom: 10 }}>
-          <TouchableOpacity style={styles.filtroBtn} onPress={() => setModalVisible(true)}>
-            <Text style={styles.filtroTexto}>Filtros</Text>
-            <Icon name="filter" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
+
+          {dropdownVisible && (
+            <View
+              style={[styles.dropdownMenu, {
+                top: dropdownPosition.top,
+                left: dropdownPosition.left,
+                width: dropdownPosition.width,
+              }]}
+            >
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => handleFilterSelection('todas')}
+              >
+                <Text>Mis Comidas</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => handleFilterSelection('sugerencias')}
+              >
+                <Text>Sugerencias</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        <View style={styles.separator} />
 
         <Modal animationType="slide" visible={modalVisible} transparent>
           <View style={styles.modalOverlay}>
@@ -539,7 +537,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
-    width: '60%',
+    width: '50%',
     borderRadius: 8,
   },
   dropdownButton: {
@@ -551,6 +549,12 @@ const styles = StyleSheet.create({
   dropdownButtonText: {
     color: '#FFF',
     fontSize: 14,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',  
+    justifyContent: 'space-between', 
+    marginBottom: 8,
   },
   dropdownMenu: {
     position: 'absolute',
@@ -639,11 +643,8 @@ const styles = StyleSheet.create({
   },
   filtroBtn: {
     backgroundColor: '#2F5D8C',
-    padding: 12,
+    padding: 10,
     borderRadius: 10,
-    flexDirection: 'row',
-    width:'25%',
-    gap: 5,
   },
   filtroTexto: {
     color: '#fff',
@@ -689,5 +690,11 @@ const styles = StyleSheet.create({
   aplicarTexto: {
     color: '#fff',
     fontWeight: 'bold'
-  }
+  },
+  separator: {
+    height: 0.5,
+    backgroundColor: '#2F5D8C',
+    marginVertical: 12,
+    borderRadius: 1,
+  },
 });

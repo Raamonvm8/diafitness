@@ -3,12 +3,15 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import SubDieta from './SubDieta';
 import SubReceta from './SubReceta';
 import Fondo from '../fondo';
+import Header from '../header';
+
 
 export default function Dieta() {
   const [selectedTab, setSelectedTab] = useState('dieta');
 
   return (
     <Fondo>
+    <Header/>
     <View style={styles.container}>
       <View style={styles.tabContainer}>
         <TouchableOpacity
