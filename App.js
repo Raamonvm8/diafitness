@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Header from './components/header';
 import NavBottons from './navMenu/navBottons';
+import StackPerfil from './components/perfil/stackPerfil'
 import Login from './components/login/login';
 import Register from './components/login/register';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -49,10 +50,10 @@ function AppStackScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="light" />
-      <Header />
-      <View style={styles.container}>
-        <NavBottons />
-      </View>
+      <AppStack.Navigator screenOptions={{ headerShown: false }}>
+        <AppStack.Screen name="MainTabs" component={NavBottons} />
+        <AppStack.Screen name="Perfil" component={StackPerfil} />
+      </AppStack.Navigator>
     </SafeAreaView>
   );
 }

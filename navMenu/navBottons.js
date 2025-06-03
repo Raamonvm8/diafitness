@@ -3,6 +3,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import HomePage from '../components/homePage';
 //import Dieta from '../components/dieta/dieta';
@@ -18,7 +19,7 @@ const Tab = createBottomTabNavigator();
 export default function NavBottons() {
   return (
     <Tab.Navigator
-      initialRouteName="Inicio"
+      initialRouteName="Hoy"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
@@ -38,21 +39,19 @@ export default function NavBottons() {
           let iconName;
 
           switch (route.name) {
-            case 'Inicio':
+            case 'Hoy':
               iconName = focused ? 'home' : 'home-outline';
               break;
-            case 'Calendar':
+            case 'Calendario':
               iconName = focused ? 'calendar' : 'calendar-outline';
               break;
-            case 'Dieta':
+            case 'Alimentación':
               iconName = focused ? 'restaurant' : 'restaurant-outline';
               break;
             case 'Glucosa':
               iconName = focused ? 'stats-chart' : 'stats-chart-outline';
               break;
-            case 'Perfil':
-              iconName = focused ? 'person' : 'person-outline';
-              break;
+            
           }
 
           return <Ionicons name={iconName} size={26} color={color} />;
@@ -63,11 +62,19 @@ export default function NavBottons() {
         },
       })}
     >
-      <Tab.Screen name="Inicio" component={HomePage} />
-      <Tab.Screen name="Dieta" component={DietaStack} />
+      <Tab.Screen name="Hoy" component={HomePage} />
       <Tab.Screen name="Glucosa" component={StackGlucosa} />
-      <Tab.Screen name="Calendar" component={Calendar} />
-      <Tab.Screen name="Perfil" component={StackPerfil} />
+      <Tab.Screen name="Alimentación" component={DietaStack} />
+      <Tab.Screen name="Calendario" component={Calendar} />
+      <Tab.Screen
+        name="Perfil"
+        component={StackPerfil}
+        options={{
+          tabBarButton: () => null, 
+          tabBarVisible: false, 
+        }}
+      />
+
     </Tab.Navigator>
   );
 }
