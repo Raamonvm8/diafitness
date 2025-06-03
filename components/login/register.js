@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Button, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Button, ActivityIndicator, Platform } from 'react-native';
 import { FIREBASE_AUTH, FIREBASE_DB } from '../../FirebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { setDoc, doc } from 'firebase/firestore';
+import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment';
+
 
 
 export default function Register() {
@@ -12,12 +16,26 @@ export default function Register() {
     const [name, setName] = useState('');
     const [peso, setPeso] = useState(null);
     const [altura, setAltura] = useState(null);
+    const [género, setGénero] = useState('');
+    const [fechaNacimiento, setFechaNacimiento] = useState(null);
+    const [showPicker, setShowPicker] = useState(false);
 
     const [loading, setLoading] = useState(false);
 
     const [errores, setErrores] = useState({});
     const auth = FIREBASE_AUTH;
     const navigation = useNavigation();
+
+    const onChange = (event, selectedDate) => {
+        setShowPicker(false);
+        if (selectedDate) {
+            const dia = selectedDate.getDate().toString().padStart(2, '0');
+            const mes = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+            const año = selectedDate.getFullYear();
+            const fechaFormateada = `${dia}/${mes}/${año}`;
+            setFechaNacimiento(fechaFormateada); 
+        }
+    };
 
     const handleRegister = async () => {
         setLoading(true);
@@ -29,6 +47,12 @@ export default function Register() {
             nuevosErrores.peso='Peso incompleto';
         }else if (peso < 11 || peso > 400) {
             nuevosErrores.peso = 'Peso incorrecto (Kg)';
+        }
+        if (género!=='Masculino' && género!=='Femenino') {
+            nuevosErrores.género='Género incompleto';
+        }
+        if (!fechaNacimiento) {
+            nuevosErrores.fechaNacimiento='Fecha Nacimiento incompleta';
         }
 
         if (!altura) {
@@ -68,6 +92,8 @@ export default function Register() {
                 email: email,
                 altura: altura,
                 peso: peso,
+                género: género,
+                nacimiento: fechaNacimiento,
                 creado: new Date(),
             });
 
@@ -101,6 +127,30 @@ export default function Register() {
             {errores.altura && <Text style={styles.textoError}>{errores.altura}</Text>}
             <TextInput placeholder="Peso 'Kg'" style={[styles.input, errores.peso && styles.inputError]} value={peso} onChangeText={setPeso} />
             {errores.peso && <Text style={styles.textoError}>{errores.peso}</Text>}
+            <Picker selectedValue={género} style={[styles.picker, errores.género && styles.inputError]} onValueChange={(itemValue) => setGénero(itemValue)} >
+                <Picker.Item label="Seleccione su género..." value="" />
+                <Picker.Item label="Masculino" value="Masculino" />
+                <Picker.Item label="Femenino" value="Femenino" />
+            </Picker>
+            {errores.género && <Text style={styles.textoError}>{errores.género}</Text>}
+            <View>
+                <Button
+                    title={fechaNacimiento ? fechaNacimiento : "Seleccionar fecha de nacimiento"}
+                    onPress={() => setShowPicker(true)}
+                />
+                {showPicker && (
+                    <DateTimePicker
+                    value={new Date()} 
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    maximumDate={new Date()}
+                    onChange={onChange}
+                    />
+                )}
+                {errores.fechaNacimiento && (
+                    <Text style={styles.textoError}>{errores.fechaNacimiento}</Text>
+                )}
+            </View>
             <TextInput placeholder="Email" style={[styles.input, errores.email && styles.inputError]} value={email} onChangeText={setEmail} />
             {errores.email && <Text style={styles.textoError}>{errores.email}</Text>}
             <TextInput placeholder="Contraseña" style={styles.input} value={password} onChangeText={setPassword} secureTextEntry />
@@ -124,6 +174,12 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: '#fff',
         borderRadius: 5,
+    },
+    picker: {
+        marginBottom: 10,
+        height: 55,
+        padding: 18,
+        backgroundColor: '#fff',
     },
     textoError: {
         color: 'red',
