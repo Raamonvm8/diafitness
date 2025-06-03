@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, TextInput, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, Modal, TextInput, ScrollView } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { Feather } from '@expo/vector-icons';
+import Header from '../header';
+import Fondo from '../fondo';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+import * as CalendarAPI from 'expo-calendar';
+
+//import * as Permissions from 'expo-permissions';
 
 export default function CalendarioView() {
   const hoy = new Date().toISOString().split('T')[0];
@@ -10,28 +17,100 @@ export default function CalendarioView() {
   const [modalVisible, setModalVisible] = useState(false);
   const [nuevoEvento, setNuevoEvento] = useState('');
 
+  const [horaInicio, setHoraInicio] = useState(new Date());
+  const [horaFin, setHoraFin] = useState(new Date(new Date().getTime() + 60 * 60 * 1000));
+  const [mostrarInicioPicker, setMostrarInicioPicker] = useState(false);
+  const [mostrarFinPicker, setMostrarFinPicker] = useState(false);
+
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await CalendarAPI.requestCalendarPermissionsAsync();
+      if (status === 'granted') {
+        const calendars = await CalendarAPI.getCalendarsAsync();
+        console.log('Calendarios disponibles:', calendars);
+      }
+    })();
+  }, []);
+
   const marcarFecha = (date) => {
     setSelectedDate(date.dateString);
   };
 
-  const agregarEvento = () => {
+  const obtenerEventosDelDia = async (fecha) => {
+    const { status } = await CalendarAPI.requestCalendarPermissionsAsync();
+    if (status !== 'granted') {
+      console.warn('Permiso de calendario denegado');
+      return [];
+    }
+
+    const calendars = await CalendarAPI.getCalendarsAsync(CalendarAPI.EntityTypes.EVENT);
+    const googleCalendars = calendars.filter(cal => cal.source?.name?.includes('Google'));
+
+    const calendarIds = googleCalendars.length ? googleCalendars.map(cal => cal.id) : calendars.map(cal => cal.id);
+
+    const startDate = new Date(fecha + 'T00:00:00');
+    const endDate = new Date(fecha + 'T23:59:59');
+
+    const events = await CalendarAPI.getEventsAsync(calendarIds, startDate, endDate);
+    return events;
+  };
+
+  useEffect(() => {
+    (async () => {
+      const eventosDelDia = await obtenerEventosDelDia(selectedDate);
+      setEventos({ [selectedDate]: eventosDelDia.map(ev => ev.title) });
+    })();
+  }, [selectedDate]);
+
+
+
+  const agregarEvento = async () => {
     if (!nuevoEvento) return;
-    setEventos(prev => ({
-      ...prev,
-      [selectedDate]: [...(prev[selectedDate] || []), nuevoEvento],
-    }));
+
+    const startDate = new Date(`${selectedDate}T${horaInicio.toTimeString().split(' ')[0]}`);
+    const endDate = new Date(`${selectedDate}T${horaFin.toTimeString().split(' ')[0]}`);
+
+    try {
+      const { status } = await CalendarAPI.requestCalendarPermissionsAsync();
+      if (status === 'granted') {
+        const calendars = await CalendarAPI.getCalendarsAsync(CalendarAPI.EntityTypes.EVENT);
+        
+        const defaultCalendar = calendars.find(
+          cal => cal.source?.name === 'Default' || cal.source?.name === 'iCloud'
+        ) || calendars[0];
+
+        if (defaultCalendar?.id) {
+          await CalendarAPI.createEventAsync(defaultCalendar.id, {
+            title: nuevoEvento,
+            startDate,
+            endDate,
+            timeZone: 'Europe/Madrid',
+            notes: 'Evento añadido desde la app.',
+          });
+
+          const eventosDelDia = await obtenerEventosDelDia(selectedDate);
+          setEventos({ [selectedDate]: eventosDelDia.map(ev => ev.title) });
+        } else {
+          console.warn('No se encontró un calendario compatible');
+        }
+      }
+    } catch (error) {
+      console.error('Error al crear evento en el calendario:', error);
+    }
+
     setNuevoEvento('');
     setModalVisible(false);
   };
 
-  const objetivosDelMes = [
-    'Ir al gimnasio 3 veces por semana',
-    'Beber 2L de agua al día',
-    'Evitar azúcar procesado'
-  ];
+
 
   return (
+    <Fondo>
+    
+    <><Header />
     <ScrollView style={styles.container}>
+
       <Calendar
         onDayPress={marcarFecha}
         markedDates={{
@@ -43,8 +122,7 @@ export default function CalendarioView() {
           todayTextColor: '#2F5D8C',
           arrowColor: '#2F5D8C',
         }}
-        firstDay={1}
-      />
+        firstDay={1} />
 
       <View style={styles.seccionDia}>
         <Text style={styles.subtitulo}>Resumen del {selectedDate || 'día'}</Text>
@@ -62,7 +140,7 @@ export default function CalendarioView() {
         </TouchableOpacity>
       </View>
 
-      
+
 
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
@@ -72,8 +150,40 @@ export default function CalendarioView() {
               value={nuevoEvento}
               onChangeText={setNuevoEvento}
               placeholder="Escribe el evento"
-              style={styles.input}
-            />
+              style={styles.input} />
+
+            <Text style={{ marginBottom: 5 }}>Hora de inicio:</Text>
+            <TouchableOpacity onPress={() => setMostrarInicioPicker(true)} style={styles.input}>
+              <Text>{horaInicio.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+            </TouchableOpacity>
+            {mostrarInicioPicker && (
+              <DateTimePicker
+                value={horaInicio}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'spinner'}
+                onChange={(event, selected) => {
+                  setMostrarInicioPicker(false);
+                  if (selected) setHoraInicio(selected);
+                }}
+              />
+            )}
+
+            <Text style={{ marginTop: 10, marginBottom: 5 }}>Hora de fin:</Text>
+            <TouchableOpacity onPress={() => setMostrarFinPicker(true)} style={styles.input}>
+              <Text>{horaFin.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+            </TouchableOpacity>
+            {mostrarFinPicker && (
+              <DateTimePicker
+                value={horaFin}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'spinner'}
+                onChange={(event, selected) => {
+                  setMostrarFinPicker(false);
+                  if (selected) setHoraFin(selected);
+                }}
+              />
+            )}
+
             <TouchableOpacity style={styles.boton} onPress={agregarEvento}>
               <Text style={styles.botonTexto}>Guardar</Text>
             </TouchableOpacity>
@@ -83,7 +193,8 @@ export default function CalendarioView() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </ScrollView></>
+    </Fondo>
   );
 }
 
