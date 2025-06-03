@@ -8,6 +8,8 @@ import { useNavigation } from '@react-navigation/native';
 import moment from 'moment';
 import { agregarSugerenciasComidaGlobales } from '../dieta/cargarSugerencias';
 import { useFocusEffect } from '@react-navigation/native';
+import Header from '../header';
+import Fondo from '../fondo';
 
 
 export default function Perfil() {
@@ -76,47 +78,35 @@ export default function Perfil() {
 
 
   return (
+    <Fondo>
+    <><Header />
     <ScrollView style={styles.container}>
-      
+
       <View style={styles.avatarContainer}>
         <Image
           source={require('../../assets/perfil/avatar-perfil.png')}
-          style={styles.avatar}
-        />
+          style={styles.avatar} />
         {usuario ? (
           <>
-            <Text style={styles.name} >{usuario.nombre}</Text>
-            <Text style={styles.email} >{usuario.email}</Text>
+            <Text style={styles.name}>{usuario.nombre}</Text>
+            <Text style={styles.email}>{usuario.email}</Text>
           </>
         ) : (
           <Text>Cargando datos del usuario...</Text>
         )}
-        </View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Información Personal</Text>
         <View style={styles.infoItem}>
           <MaterialCommunityIcons name="dumbbell" size={22} color="#2F5D8C" />
-            <Text style={styles.infoText} >Peso: {usuario?.peso ?? ''}Kg</Text>
+          <Text style={styles.infoText}>Peso: {usuario?.peso ?? ''}Kg</Text>
         </View>
         <View style={styles.infoItem}>
           <MaterialCommunityIcons name="human-male-height" size={22} color="#2F5D8C" />
-            <Text style={styles.infoText}>Altura: {usuario?.altura ?? ''} m </Text>
+          <Text style={styles.infoText}>Altura: {usuario?.altura ?? ''} m </Text>
         </View>
       </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferencias</Text>
-        <View style={styles.infoItem}>
-          <Ionicons name="notifications-outline" size={22} color="#2F5D8C" />
-          <Text style={styles.infoText}>Notificaciones activadas</Text>
-        </View>
-        <View style={styles.infoItem}>
-          <Ionicons name="color-palette-outline" size={22} color="#2F5D8C" />
-          <Text style={styles.infoText}>Tema: Claro</Text>
-        </View>
-      </View>
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle} onPress={agregarSugerenciasComidaGlobales}>Objetivos de este mes</Text>
         {objetivos.length > 0 ? (
@@ -131,27 +121,21 @@ export default function Perfil() {
           <Text style={styles.botonSecundarioTexto}>Gestionar objetivos</Text>
         </TouchableOpacity>
       </View>
-
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.editButton}>
-          <Ionicons name="create-outline" size={20} color="#2F5D8C" />
-          <Text style={styles.editText}>Editar Perfil</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={async () => {
-          try {
-            const auth = getAuth();
-            await signOut(auth);
-          } catch (error) {
-            console.error('Error al cerrar sesión:', error.message);
-          }
-        }} style={styles.logoutButton}>
-          <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
-        </TouchableOpacity>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Preferencias</Text>
+        <View style={styles.infoItem}>
+          <Ionicons name="notifications-outline" size={22} color="#2F5D8C" />
+          <Text style={styles.infoText}>Notificaciones activadas</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Ionicons name="color-palette-outline" size={22} color="#2F5D8C" />
+          <Text style={styles.infoText}>Tema: Claro</Text>
+        </View>
       </View>
-    </ScrollView>
+
+
+    </ScrollView></>
+    </Fondo>
   );
 }
 
@@ -159,7 +143,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E0F0FF',
-    marginBottom: 60
   },
   header: {
     backgroundColor: '#2F5D8C',
