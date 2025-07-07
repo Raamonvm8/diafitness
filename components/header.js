@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { FIREBASE_AUTH } from '../FirebaseConfig';
+import { MaterialCommunityIcons } from 'react-native-vector-icons';
 
 export default function Header() {
   const navigation = useNavigation();
@@ -30,7 +31,21 @@ export default function Header() {
   };
 
   const handleLogout = () => {
-    FIREBASE_AUTH.signOut();
+    Alert.alert("Confirmar", "¿Estás seguro que quieres salir?", 
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Salir",
+          style: "destructive",
+          onPress: () => {
+            FIREBASE_AUTH.signOut();
+          }
+        }
+      ]);
+    //
   };
 
   const handleEditarPerfil = () => {
@@ -45,10 +60,10 @@ export default function Header() {
         {currentRouteName === 'Perfil' ? (
           <>
             <TouchableOpacity onPress={handleEditarPerfil} style={styles.actionButton}>
-              <Text style={styles.actionText}>Editar</Text>
+                <MaterialCommunityIcons name="pencil-plus-outline" size={22} color="#2F5D8C" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleLogout} style={styles.actionButton}>
-              <Text style={styles.actionText}>Logout</Text>
+                <MaterialCommunityIcons name="logout" size={22} color="#2F5D8C" />
             </TouchableOpacity>
           </>
         ) : (
