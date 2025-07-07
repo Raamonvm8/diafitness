@@ -215,7 +215,8 @@ const CrearRecetaScreen = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model: 'llama3',
-              prompt: `Clasifica el objetivo nutricional de esta receta: "${description}", "${ingredientesString}". Devuelve estrictamente un array JSON llamado "objetivos" con los elementos seleccionados de: ["Alta en proteínas", "Baja en calorías", "Alta en calorías", "Baja en grasas", "Alta en carbohidratos", "Baja en carbohidratos", "Bajo índice glucémico", "Alta en fibra", "Sin lactosa", "Sin gluten", "Vegana", "Vegetariana"].
+              prompt: `Clasifica el objetivo nutricional de esta receta: "${description}", "${ingredientesString}".
+               Devuelve estrictamente un array JSON llamado "objetivos" con los elementos seleccionados de: ["Alta en proteínas", "Baja en calorías", "Alta en calorías", "Baja en grasas", "Alta en carbohidratos", "Baja en carbohidratos", "Bajo índice glucémico", "Alta en fibra", "Sin lactosa", "Sin gluten", "Vegana", "Vegetariana"].
 
 Solo incluye los elementos que realmente correspondan según los ingredientes y cantidades. Evalúa los valores por ración (según el número de personas). Utiliza las siguientes reglas aproximadas:
 
@@ -309,10 +310,18 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 120 }} style={styles.container}>
       
+      <View style={styles.botonCentrado}>
+        <TouchableOpacity
+          style={[styles.botonCustom, { marginTop: 30, width:150, height: 50, justifyContent: 'center', backgroundColor: '#C7F2E6' }]}
+          onPress={guardarReceta}
+        >
+          <Text style={[styles.botonCustomText, {color: '#2F5D8C'}]}>Guardar</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.seccion}>
 
         <TextInput
-          placeholder="Nombre de la comida"
+          placeholder="Nombre"
           style={styles.input}
           value={nombreReceta}
           onChangeText={setNombreReceta}
@@ -323,9 +332,6 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
           value={description}
           onChangeText={setDescription}
         />
-      </View>
-
-      <View style={styles.seccion}>
         <View style={styles.medidaDropdown}>
           <Picker
             selectedValue={tipo}
@@ -341,16 +347,18 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
           
         </View>
         <TextInput
-          placeholder="Duración en minutos"
-          style={styles.input}
-          keyboardType="numeric"
-          value={duración.toString()}
-          onChangeText={(text) => {
-            const valorNumerico = parseInt(text, 10);
-            setDuracion(isNaN(valorNumerico) ? 0 : valorNumerico);
-          }}
-        />
+            placeholder="Tiempo de preparación (min)"
+            style={styles.input}
+            keyboardType="numeric"
+            value={duración.toString()}
+            onChangeText={(text) => {
+              const valorNumerico = parseInt(text, 10);
+              setDuracion(isNaN(valorNumerico) ? 0 : valorNumerico);
+            }}
+          />
       </View>
+
+      
       <Text style={styles.titulo}>Describe la receta</Text>
       
       <View style={styles.seccion}>
@@ -403,7 +411,7 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
           <Text style={styles.subtitulo}>Pasos</Text>
           <View style={{flexDirection: 'row', gap: 20}} >
             <TextInput
-              placeholder="Describe un paso"
+              placeholder="Descripción de un paso"
               style={styles.inputPaso}
               value={paso}
               onChangeText={setPaso}
@@ -424,11 +432,14 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
       </View>
   
       <View style={styles.seccion}>
-        <Text style={styles.subtitulo}>Subir Imagen</Text>
+        <View style={{flexDirection: 'row', alignContent: 'center'}} >
+          <Text style={styles.subtitulo}>Añadir Imagen</Text>
 
-        <TouchableOpacity onPress={mostrarOpciones} style={styles.boton}>
-          <Ionicons name="cloud-upload-outline" size={24} color="white" />
-        </TouchableOpacity>
+          <TouchableOpacity onPress={mostrarOpciones} style={styles.boton}>
+            <Ionicons name="cloud-upload-outline" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+        
     
         {imagenURL && (
           <Image source={{ uri: imagenURL }} style={styles.imagen} />
@@ -437,14 +448,7 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
 
       
   
-      <View style={styles.botonCentrado}>
-        <TouchableOpacity
-          style={[styles.botonCustom, { marginTop: 30, width:150, height: 50, justifyContent: 'center', backgroundColor: '#C7F2E6' }]}
-          onPress={guardarReceta}
-        >
-          <Text style={[styles.botonCustomText, {color: '#2F5D8C'}]}>Guardar</Text>
-        </TouchableOpacity>
-      </View>
+      
     </ScrollView>
   );
   
@@ -466,9 +470,9 @@ const styles = StyleSheet.create({
   subtitulo: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
     textAlign: 'center',
-    color: '#2F5D8C'
+    color: '#2F5D8C',
+    marginBottom: 10
   },
   input: {
     borderWidth: 1,
@@ -530,7 +534,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
+    marginBottom: 10
   },
   botonTexto: {
     color: 'white',

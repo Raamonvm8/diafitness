@@ -12,7 +12,9 @@ export default function Dieta() {
   return (
     <Fondo>
     <Header/>
+
     <View style={styles.container}>
+      
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[
@@ -37,7 +39,18 @@ export default function Dieta() {
             Comidas
           </Text>
         </TouchableOpacity>
+        {selectedTab === 'comida' ? (
+          <View style={styles.buttonSlot}>
+            <SubReceta showOnlyCreateButton />
+          </View>
+        ) :
+          <View style={styles.buttonSlot}>
+            <SubDieta showOnlyCreateButton />
+          </View>
+        }
       </View>
+      
+
 
       {selectedTab === 'dieta' ? <SubDieta /> : <SubReceta />}
     </View>
@@ -80,4 +93,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  tabAndButtonRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginTop: 20,
+  marginHorizontal: 20,
+},
+
+buttonSlot: {
+  marginLeft: 10,
+},
+
 });

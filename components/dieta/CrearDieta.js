@@ -179,19 +179,23 @@ export default function CrearDieta() {
 
   return (
     <ScrollView style={styles.container}>
-      <TextInput
-        style={styles.input}
-        placeholder="Título de la dieta"
-        value={title}
-        onChangeText={setTitle}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Descripción (Opcional)"
-        value={description}
-        onChangeText={setDescription}
-      />
+      <View style={styles.seccion} >
+        <TextInput
+          style={styles.input}
+          placeholder="Nombre de la dieta"
+          value={title}
+          onChangeText={setTitle}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Descripción (Opcional)"
+          value={description}
+          onChangeText={setDescription}
+        />
+      </View>
+      
 
+      <View style={styles.seccion} >
       <View style={styles.selectorContainer}>
         <TouchableOpacity onPress={() => setDiaActualIndex((prev) => (prev - 1 + DIAS.length) % DIAS.length)}>
           <Text style={styles.flecha}>◀</Text>
@@ -223,6 +227,8 @@ export default function CrearDieta() {
           </TouchableOpacity>
         </View>
       ))}
+      </View>
+      
 
 
       <View style={{marginVertical: 30, flexDirection: 'row', justifyContent: 'center', gap:10}} >
@@ -391,6 +397,18 @@ const styles = StyleSheet.create({
   },
   crearDesayuno: {
     backgroundColor: '#C7F2E6', padding: 12, borderRadius: 10, alignItems: 'center', alignSelf: 'center', marginBottom: 10, width: '20%'
-  }
+  },
+  seccion: {
+    borderWidth: 1,
+    borderColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: '#f9f9f9',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   
 });

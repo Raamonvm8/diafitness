@@ -22,7 +22,7 @@ import platoDefecto from '../../assets/platoharvard.png';
 
 
 
-export default function SubReceta() {
+export default function SubReceta({ showOnlyCreateButton = false }) {
   const navigation = useNavigation();
   const [recetas, setRecetas] = useState([]);
   const [sugerencias, setSugerencias] = useState([]);
@@ -57,7 +57,16 @@ export default function SubReceta() {
   const [merienda, setMerienda] = useState(false);
   const [cena, setCena] = useState(false);
 
-  
+  if (showOnlyCreateButton) {
+    return (
+      <TouchableOpacity
+        onPress={() => navigation.navigate('CrearReceta')}
+        style={styles.crearButton}
+      >
+        <Text style={styles.crearButtonText}>+ Crear</Text>
+      </TouchableOpacity>
+    );
+  }
 
   const toggleTempFilter = (section, value) => {
     const current = tempSelectedFilters[section];
@@ -352,10 +361,6 @@ export default function SubReceta() {
   return (
     <TouchableWithoutFeedback onPress={closeDropdown}>
       <View style={styles.container}>
-        <TouchableOpacity onPress={() => navigation.navigate('CrearReceta')} style={styles.crearButton}>
-          <Text style={styles.crearButtonText}>+ Crear</Text>
-        </TouchableOpacity>
-
           <View style={styles.searchRow}>
             <TextInput
               style={styles.searchInput}
@@ -433,7 +438,7 @@ export default function SubReceta() {
                   </TouchableOpacity>
                 ))}
 
-                <Text style={[styles.seccionTitulo, { marginTop: 20 }]}>Duración</Text>
+                <Text style={[styles.seccionTitulo, { marginTop: 20 }]}>Tiempo de preparación</Text>
                 {FILTERS.duración.map((opcion) => (
                   <TouchableOpacity
                     key={opcion}
@@ -517,8 +522,9 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     alignSelf: 'center',
-    marginBottom: 20,
     borderWidth: 1,
+    marginTop: 5,
+    marginLeft: 30,
     borderColor: '#2F5D8C',
     width: 80,
   },
@@ -532,6 +538,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    marginTop: 15,
   },
   searchInput: {
     borderWidth: 1,
@@ -675,7 +682,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#eee',
     marginBottom: 8,
-    borderRadius: 8
+    borderRadius: 8,
   },
   opcionSeleccionada: {
     backgroundColor: '#cce5ff'

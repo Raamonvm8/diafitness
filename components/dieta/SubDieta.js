@@ -15,7 +15,7 @@ import { FIREBASE_DB } from '../../FirebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 
 
-export default function SubDieta() {
+export default function SubDieta({ showOnlyCreateButton = false }) {
   const [dietas, setDietas] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [filter, setFilter] = useState('todas');
@@ -29,6 +29,16 @@ export default function SubDieta() {
   const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
   const diaActualLetra = diasSemana[new Date().getDay()];
 
+  if (showOnlyCreateButton) {
+    return (
+      <TouchableOpacity
+        onPress={() => navigation.navigate('CrearDieta')}
+        style={styles.crearButton}
+      >
+        <Text style={styles.crearButtonText}>+ Crear</Text>
+      </TouchableOpacity>
+    );
+  }
 
   useEffect(() => {
     const auth = getAuth();
@@ -128,10 +138,6 @@ export default function SubDieta() {
   return (
     <TouchableWithoutFeedback onPress={closeDropdown}>
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => navigation.navigate('CrearDieta')} style={styles.crearButton}>
-        <Text style={styles.crearButtonText}>+ Crear</Text>
-      </TouchableOpacity>
-
       {dietas.length === 0 && (
         <View style={styles.textContainer}>
           <Text style={styles.textEmpty}>Crea tu primera dieta</Text>
@@ -178,6 +184,7 @@ export default function SubDieta() {
           </TouchableOpacity>
         </View>
       )}
+      <View style={styles.separator2} />
 
       <ScrollView style={styles.scrollView}>
         {filteredDietas.length === 0 && (
@@ -276,8 +283,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderWidth: 1,
     borderColor: '#2F5D8C',
-    marginBottom: 20,
-    width: 80
+    width: 80,
+    marginTop: 5,
+    marginLeft: 30
   },
   crearButtonText: {
     color: '#2F5D8C',
@@ -356,7 +364,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
+    marginTop: 15
   },
   searchInput: {
     borderWidth: 1,
@@ -396,10 +405,11 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  separator: {
-    height: 2,
-    backgroundColor: '#fffafe',
-    marginVertical: 20,
+  separator2: {
+    height: 0.5,
+    backgroundColor: '#2F5D8C',
+    marginVertical: 18,
+    borderRadius: 1,
   },
   row: {
     flexDirection: 'column',
@@ -444,6 +454,12 @@ const styles = StyleSheet.create({
   cellBorder: {
     borderRightWidth: 1,
     borderRightColor: '#ddd',
+  },
+  separator: {
+    height: 0.5,
+    backgroundColor: '#2F5D8C',
+    marginVertical: 12,
+    borderRadius: 1,
   },
   headerText: {
     color: '#fff',
