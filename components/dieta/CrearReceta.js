@@ -308,148 +308,152 @@ No des explicaciones ni texto adicional. Devuelve solo el array. Por ejemplo: ["
   
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 120 }} style={styles.container}>
+    <View contentContainerStyle={{ paddingBottom: 120 }} style={styles.container}>
       
       <View style={styles.botonCentrado}>
         <TouchableOpacity
-          style={[styles.botonCustom, { marginTop: 30, width:150, height: 50, justifyContent: 'center', backgroundColor: '#C7F2E6' }]}
+          style={[styles.botonCustom, { width:150, height: 50, justifyContent: 'center', backgroundColor: '#C7F2E6' }]}
           onPress={guardarReceta}
         >
           <Text style={[styles.botonCustomText, {color: '#2F5D8C'}]}>Guardar</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.seccion}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 20}} >
+        <View style={styles.seccion}>
 
-        <TextInput
-          placeholder="Nombre"
-          style={styles.input}
-          value={nombreReceta}
-          onChangeText={setNombreReceta}
-        />
-        <TextInput
-          placeholder="Descripción"
-          style={styles.input}
-          value={description}
-          onChangeText={setDescription}
-        />
-        <View style={styles.medidaDropdown}>
-          <Picker
-            selectedValue={tipo}
-            onValueChange={(value) => setTipo(value)}
-          >
-            <Picker.Item label="tipo de comida" value="tipo de comida" />
-            <Picker.Item label="desayuno" value="desayuno" />
-            <Picker.Item label="media mañana" value="media mañana" />
-            <Picker.Item label="comida" value="comida" />
-            <Picker.Item label="merienda" value="merienda" />
-            <Picker.Item label="cena" value="cena" />
-          </Picker>
-          
-        </View>
-        <TextInput
-            placeholder="Tiempo de preparación (min)"
-            style={styles.input}
-            keyboardType="numeric"
-            value={duración.toString()}
-            onChangeText={(text) => {
-              const valorNumerico = parseInt(text, 10);
-              setDuracion(isNaN(valorNumerico) ? 0 : valorNumerico);
-            }}
-          />
-      </View>
-
-      
-      <Text style={styles.titulo}>Describe la receta</Text>
-      
-      <View style={styles.seccion}>
-        <View style={styles.ingredienteContainer}>
-          <Text style={styles.subtitulo}>Ingredientes</Text>
-    
-          <View style={styles.row}>
-            <TextInput
-              placeholder="Ingrediente"
-              style={[styles.input, styles.inputSmall]}
-              value={nombreIngrediente}
-              onChangeText={setNombreIngrediente}
-            />
-            <TextInput
-              placeholder="Cantidad"
-              style={[styles.input, styles.inputSmall]}
-              value={cantidadIngrediente}
-              keyboardType="numeric"
-              onChangeText={setCantidadIngrediente}
-            />
-            <View style={styles.medidaDropdown}>
-              <Picker
-                selectedValue={unidadMedida}
-                onValueChange={(itemValue) => setUnidadMedida(itemValue)}
-              >
-                <Picker.Item label="g" value="g" />
-                <Picker.Item label="ml" value="ml" />
-                <Picker.Item label="unidad/es" value="unidades" />
-                <Picker.Item label="cucharada/s" value="cucharadas" />
-                <Picker.Item label="taza/s" value="tazas" />
-              </Picker>
+              <TextInput
+                placeholder="Nombre"
+                style={styles.input}
+                value={nombreReceta}
+                onChangeText={setNombreReceta}
+              />
+              <TextInput
+                placeholder="Descripción"
+                style={styles.input}
+                value={description}
+                onChangeText={setDescription}
+              />
+              <View style={styles.medidaDropdown}>
+                <Picker
+                  selectedValue={tipo}
+                  onValueChange={(value) => setTipo(value)}
+                >
+                  <Picker.Item label="tipo de comida" value="tipo de comida" />
+                  <Picker.Item label="desayuno" value="desayuno" />
+                  <Picker.Item label="media mañana" value="media mañana" />
+                  <Picker.Item label="comida" value="comida" />
+                  <Picker.Item label="merienda" value="merienda" />
+                  <Picker.Item label="cena" value="cena" />
+                </Picker>
+                
+              </View>
+              <TextInput
+                  placeholder="Tiempo de preparación (min)"
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={duración.toString()}
+                  onChangeText={(text) => {
+                    const valorNumerico = parseInt(text, 10);
+                    setDuracion(isNaN(valorNumerico) ? 0 : valorNumerico);
+                  }}
+                />
             </View>
-            <TouchableOpacity style={styles.botonCustom} onPress={agregarIngrediente}>
-              <Text style={styles.botonCustomText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        
+
+            
+            <Text style={styles.titulo}>Describe la receta</Text>
+            
+            <View style={styles.seccion}>
+              <View style={styles.ingredienteContainer}>
+                <Text style={styles.subtitulo}>Ingredientes</Text>
           
-    
-          {ingredientes.map((item, index) => (
-            <Text key={index} style={styles.ingredienteItem}>
-              {item.nombre}: {item.cantidad} {item.unidad}
-            </Text>
-          ))}
-        </View>
-      </View>
+                <View style={styles.row}>
+                  <TextInput
+                    placeholder="Ingrediente"
+                    style={[styles.input, { width: '30%', marginRight: 5 }]}
+                    value={nombreIngrediente}
+                    onChangeText={setNombreIngrediente}
+                  />
+                  <TextInput
+                    placeholder="Cantidad"
+                    style={[styles.input, { width: '25%', marginRight: 5 }]}
+                    value={cantidadIngrediente}
+                    keyboardType="numeric"
+                    onChangeText={setCantidadIngrediente}
+                  />
+                  <View style={[styles.medidaDropdown, { width: '30%' }]}>
+                    <Picker
+                      selectedValue={unidadMedida}
+                      onValueChange={(itemValue) => setUnidadMedida(itemValue)}
+                    >
+                      <Picker.Item label="g" value="g" />
+                      <Picker.Item label="ml" value="ml" />
+                      <Picker.Item label="unidad/es" value="unidades" />
+                      <Picker.Item label="cucharada/s" value="cucharadas" />
+                      <Picker.Item label="taza/s" value="tazas" />
+                    </Picker>
+                  </View>
+                  <TouchableOpacity style={[styles.botonCustom, { paddingHorizontal: 10 }]} onPress={agregarIngrediente}>
+                    <Text style={styles.botonCustomText}>+</Text>
+                  </TouchableOpacity>
+                </View>
 
-      <View style={styles.seccion}>
-        <View style={styles.pasosContainer}>
-          <Text style={styles.subtitulo}>Pasos</Text>
-          <View style={{flexDirection: 'row', gap: 20}} >
-            <TextInput
-              placeholder="Descripción de un paso"
-              style={styles.inputPaso}
-              value={paso}
-              onChangeText={setPaso}
-            />
-            <View >
-              <TouchableOpacity style={styles.botonCustomPaso} onPress={agregarPaso}>
-                <Text style={styles.botonCustomText}> + </Text>
-              </TouchableOpacity>
+              
+                
+          
+                {ingredientes.map((item, index) => (
+                  <Text key={index} style={styles.ingredienteItem}>
+                    {item.nombre}: {item.cantidad} {item.unidad}
+                  </Text>
+                ))}
+              </View>
             </View>
-          </View>
-        </View>
-  
-        {pasos.map((item, index) => (
-          <Text key={index} style={styles.pasoItem}>
-            {index + 1}. {item}
-          </Text>
-        ))}
-      </View>
-  
-      <View style={styles.seccion}>
-        <View style={{flexDirection: 'row', alignContent: 'center'}} >
-          <Text style={styles.subtitulo}>Añadir Imagen</Text>
 
-          <TouchableOpacity onPress={mostrarOpciones} style={styles.boton}>
-            <Ionicons name="cloud-upload-outline" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
+            <View style={styles.seccion}>
+              <View style={styles.pasosContainer}>
+                <Text style={styles.subtitulo}>Pasos</Text>
+                <View style={{flexDirection: 'row', gap: 20}} >
+                  <TextInput
+                    placeholder="Descripción de un paso"
+                    style={styles.inputPaso}
+                    value={paso}
+                    onChangeText={setPaso}
+                  />
+                  <View >
+                    <TouchableOpacity style={styles.botonCustomPaso} onPress={agregarPaso}>
+                      <Text style={styles.botonCustomText}> + </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
         
-    
-        {imagenURL && (
-          <Image source={{ uri: imagenURL }} style={styles.imagen} />
-        )}
-      </View>
+              {pasos.map((item, index) => (
+                <Text key={index} style={styles.pasoItem}>
+                  {index + 1}. {item}
+                </Text>
+              ))}
+            </View>
+        
+            <View style={styles.seccion}>
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 90, alignItems: 'center' }}>
+                <Text style={styles.subtitulo}>Añadir Imagen</Text>
+
+                <TouchableOpacity onPress={mostrarOpciones} style={styles.boton}>
+                  <Ionicons name="cloud-upload-outline" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+
+              {imagenURL && (
+                <Image source={{ uri: imagenURL }} style={styles.imagen} />
+              )}
+            </View>
+      </ScrollView>
+      
+
 
       
   
       
-    </ScrollView>
+    </View>
   );
   
 };
@@ -507,7 +511,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 40,
     marginBottom: 10,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
   },
   ingredienteContainer: {
     marginBottom: 20,
