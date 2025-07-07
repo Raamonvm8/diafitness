@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Easing, LayoutAnimation, UIManager, Platform, TextInput } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Easing, LayoutAnimation, UIManager, Platform, TextInput, Alert } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import Fondo from './fondo';
 import { getAuth } from 'firebase/auth';
 import { FIREBASE_DB  } from '../FirebaseConfig';
-import { collection, onSnapshot, snapshotEqual, doc, where, query } from 'firebase/firestore';
+import { collection, onSnapshot, snapshotEqual, doc, where, query, getDoc } from 'firebase/firestore';
 import { FontAwesome } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faMugSaucer } from '@fortawesome/free-solid-svg-icons';
@@ -12,6 +12,11 @@ import { MaterialCommunityIcons } from 'react-native-vector-icons';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import Header from './header';
 import { Picker } from '@react-native-picker/picker';
+import { useFocusEffect } from '@react-navigation/native';
+import moment from 'moment';
+
+
+
 
 
 
@@ -27,13 +32,20 @@ export default function HomePage() {
 
   const [caloriasConsumidas, setCaloriasConsumidas] = useState(0);
   const [caloriasEstimadas, setCaloriasEstimadas] = useState({});
+  const [caloriasQuemadasTotales, setCaloriasQuemadasTotales] = useState(0);
 
+
+  const [actividades, setActividades] = useState([]);
   const [actividad, setActividad] = useState('');
   const [duracion, setDuracion] = useState('');
   const [intensidad, setIntensidad] = useState('');
+
   const [caloriasQuemadas, setCaloriasQuemadas] = useState(0);
   const [balanceCalorico, setBalanceCalorico] = useState(0);
 
+  const [yaAvisado, setYaAvisado] = useState(false);
+
+  const [objetivos, setObjetivos] = useState([]);
 
 
   const diasSemana = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
@@ -68,6 +80,40 @@ export default function HomePage() {
     Pesas: { Baja: 3, Media: 4.5, Alta: 6 },
   };
 
+  const cargarObjetivos = async () => {
+    console.log("🔍 cargarObjetivos() - inicio");
+
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      console.log("Usuario no autenticado");
+      return;
+    }
+    
+
+    const mesActual = moment().format('MM-YYYY');
+    const refObjetivos = doc(FIREBASE_DB, 'Objetivos Mensuales', `${user.uid}_${mesActual}`);
+
+    try {
+      const getRefDoc = await getDoc(refObjetivos);
+
+      if (getRefDoc.exists()) {
+        const data = getRefDoc.data();
+        console.log("Objetivos cargados:", data.objetivos_fitness);
+
+        setObjetivos(data.objetivos_fitness);
+      } else {
+        console.log('No se encontraron objetivos del usuario para este mes.');
+        setObjetivos([]);
+      }
+    } catch (error) {
+      console.error("Error al cargar objetivos:", error);
+    }
+  };
+
+  
+
   useEffect(() => {
     if (!actividad || !duracion || !intensidad) return;
 
@@ -101,14 +147,39 @@ export default function HomePage() {
     setBalanceCalorico(balance);
     console.log(caloriasEstimadas);
 
-  }, [caloriasEstimadas, caloriasQuemadas, checkedComidas]);
+    if(balanceCalorico>calculoTMB() && !yaAvisado){
+      const objectiveGrasa = objetivos.find(o => o === "Perder grasa corporal");
+      //Aumentar volumen: 5% a 15% por encima del GET
+      //Definicion muscular: 5% a 15% por debajo del GET
+      //Mantener misma composicion: 5% arriba 5% abajo
+      //MAntener ressistencia fisica: ligero superavit de 5% o 10%
+      if(objectiveGrasa && objetivos.find(o => o === "Aumentar volumen muscular") && objetivos.find(o => o === "Aumentar resistencia física") && balanceCalorico>calculoTMB()+calculoTMB()*0.05){
+        Alert.alert("Haz algo de actividad física", `Para cumplir con tu objetivo de perder grasa, aumentar volumen muscular y resistencia física, debes estar en un rango de entre ${calculoTMB()-calculoTMB()*0.05}kcal y ${calculoTMB()+calculoTMB()*0.05}kcal. Y estás en (${balanceCalorico}kcal)`);
 
+      }else if(objectiveGrasa){
+        Alert.alert("Haz algo de actividad física", `Para cumplir con tu objetivo de perder grasa, un balance calórico de ${balanceCalorico}kcal está por encima de tu TMB. El déficit recomendado está entre los valores ${calculoTMB()-calculoTMB()*0.2}kcal y ${calculoTMB()-calculoTMB()*0.1}kcal.`);
+      }else if (objetivos.find(o => o === "Aumentar volumen muscular") && balanceCalorico>calculoTMB()+calculoTMB()*0.15){
+        Alert.alert("Haz algo de actividad física", `Para cumplir con tu objetivo de aumentar volumen muscular, un balance calórico de ${balanceCalorico}kcal está por encima del límite. El déficit recomendado está entre los valores ${calculoTMB()+calculoTMB()*0.05}kcal y ${calculoTMB()+calculoTMB()*0.15}kcal.`);
 
+      }else if(objetivos.find(o => o === "Aumentar resistencia física") && balanceCalorico>calculoTMB()+calculoTMB()*0.15){
+        Alert.alert("Haz algo de actividad física", `Para cumplir con tu objetivo de aumentar resistencia física, un balance calórico de ${balanceCalorico}kcal está por encima del límite. Lo recomendado está entre los valores ${calculoTMB()-calculoTMB()*0.05}kcal y ${calculoTMB()+calculoTMB()*0.15}kcal.`);
+      }
+      setYaAvisado(true);
+    }else{
+      setYaAvisado(false);
+    }
 
-  const toggleCup = (index) => {
+  }, [caloriasEstimadas, caloriasQuemadas, checkedComidas, balanceCalorico]);
+
+  
+
+  const toggleCup = (index) => {    
     const newCups = [...waterCups];
     newCups[index] = !newCups[index];
     setWaterCups(newCups);
+    /*if(newCups===8){
+      Alert.alert("Felicidades!", "Has alcanzado el mínimo de agua que debemos consumir al día. Sigue así!")
+    }*/
   };
 
   const toggleSection = (section) => {
@@ -198,14 +269,16 @@ export default function HomePage() {
       UIManager.setLayoutAnimationEnabledExperimental &&
         UIManager.setLayoutAnimationEnabledExperimental(true);
     }
+    cargarObjetivos();
   }, []);
 
 
-  useEffect(()=>{
+  useEffect(() => {
     const auth = getAuth();
     const user = auth.currentUser;
     const hoy = new Date();
     if (!user) return;
+
     const userDocRef = doc(FIREBASE_DB, 'users', user.uid);
     const unsubscribe = onSnapshot(userDocRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
@@ -217,14 +290,12 @@ export default function HomePage() {
         const fechaNacimiento = new Date(año, mes - 1, dia);
         const diferenciaMs = hoy - fechaNacimiento;
         setAños(Math.floor(diferenciaMs / (1000 * 60 * 60 * 24 * 365.25)));
-
-      } else {
-        console.log("El usuario no existe en Firestore");
       }
-    })
+    });
 
-    
-  })
+    return () => unsubscribe(); 
+  }, []);
+
 
   const calcularCaloriasTotales = () => {
     let total = 0;
@@ -266,7 +337,9 @@ export default function HomePage() {
     calcularCaloriasTotales();
   }, [checkedComidas, caloriasEstimadas]);
 
+
   const dietaActual = dietas?.find(d => d.isCurrent);
+  const comidasDelDia = dietaActual?.dieta?.[diaActualLetra] || {};
 
   useEffect(() => {
     estimarCaloriasDelDia();
@@ -292,11 +365,6 @@ export default function HomePage() {
     setCheckedComidas(nuevasChecks); 
   };
 
-
-
-  const comidasDelDia = dietaActual?.dieta?.[diaActualLetra] || {};
-
-
   const calculoTMB = () => {
     if(género === 'Masculino'){
       //(10 x peso en kg) + (6,25 x altura en cm) - (5 x edad en años) + 5
@@ -310,6 +378,34 @@ export default function HomePage() {
     }
   }
 
+  const agregarActividad = () => {
+    if (!actividad || !duracion || !intensidad) {
+      alert('Por favor, completa todos los campos');
+      return;
+    }
+
+    const met = METS[actividad]?.[intensidad] || 0;
+    if (!peso || isNaN(peso) || isNaN(duracion) || !met) {
+      alert('Datos inválidos para calcular calorías');
+      return;
+    }
+
+    const duracionMin = parseFloat(duracion);
+    const caloriasActividad = ((met * peso * 3.5) / 200) * duracionMin;
+
+    setActividades(prev => [...prev, { actividad, duracion, intensidad, calorias: caloriasActividad }]);
+
+    setActividad('');
+    setDuracion('');
+    setIntensidad('');
+  };
+
+  useEffect(() => {
+    const total = actividades.reduce((sum, act) => sum + act.calorias, 0);
+    setCaloriasQuemadas(total);
+  }, [actividades]);
+
+
   const objetive = calculoTMB() || 2000;
   const progreso = Math.min((balanceCalorico / objetive) * 100, 100);
 
@@ -318,26 +414,50 @@ export default function HomePage() {
       <Header />
       <View style={styles.container}>
         
-          <View style={styles.caloriasContainer}>
-            <AnimatedCircularProgress
-              size={150}
-              width={15}
-              fill={progreso}
-              tintColor= {balanceCalorico<calculoTMB() ? "#2F5D8C" : "#ea4440"}
-              backgroundColor={balanceCalorico<0 ? "#f23026" : "#6e9ecf"}
-              rotation={0}
-              lineCap="round"
-            >
-              {
-                () => (
+          <View style={styles.caloriasContainerRow}>
+            <View style={styles.caloriasContainer}>
+              <AnimatedCircularProgress
+                size={150}
+                width={15}
+                fill={progreso}
+                tintColor={balanceCalorico < calculoTMB() ? "#2F5D8C" : "#ea4440"}
+                backgroundColor={balanceCalorico < 0 ? "#f23026" : "#6e9ecf"}
+                rotation={0}
+                lineCap="round"
+              >
+                {() => (
                   <View style={styles.innerCircle}>
                     <Text style={styles.caloriasTexto}>{balanceCalorico.toFixed(0)} kcal</Text>
                     <Text style={styles.objetivoTexto}>de {Math.round(objetive)} kcal</Text>
                   </View>
-                )
-              }
-            </AnimatedCircularProgress>
+                )}
+              </AnimatedCircularProgress>
+              <Text style={styles.ejercicioLabel}>Global</Text>
+
+            </View>
+
+            <View style={styles.caloriasEjercicioContainer}>
+              <AnimatedCircularProgress
+                size={90}
+                width={7}
+                fill={100}
+                tintColor="#76c7c0"
+                backgroundColor="#e0e0e0"
+                rotation={0}
+                lineCap="round"
+              >
+                {() => (
+                  <View style={styles.innerCircleSmall}>
+                    <Text style={styles.ejercicioTexto}>{caloriasQuemadas || 0}</Text>
+                    <Text style={styles.ejercicioLabel}>kcal</Text>
+                  </View>
+                )}
+              </AnimatedCircularProgress>
+              <Text style={styles.ejercicioLabel}>Ejercicio</Text>
+
+            </View>
           </View>
+
 
 
           <View style={styles.waterContainer}>
@@ -568,7 +688,7 @@ export default function HomePage() {
               style={[
                 styles.cardContent,
                 {
-                  height: heightEjercicio,
+                  maxHeight: heightEjercicio,
                   opacity: opacityEjercicio,
                   marginTop: heightEjercicio.interpolate({
                     inputRange: [0, 100],
@@ -584,6 +704,18 @@ export default function HomePage() {
                 }
               ]}
             >
+              <ScrollView nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
+
+              {actividades.length > 0 && (
+                <View style={{ marginVertical: 10 }}>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Actividades añadidas:</Text>
+                  {actividades.map((item, index) => (
+                    <View key={index} style={{ padding: 10, borderBottomWidth: 1, borderColor: '#ccc' }}>
+                      <Text>{item.actividad} - {item.duracion} min - Intensidad: {item.intensidad}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
               <Text style={styles.label}>Actividad:</Text>
               <View style={styles.pickerContainer}>
                 <Picker
@@ -631,9 +763,14 @@ export default function HomePage() {
                   </TouchableOpacity>
                 ))}
               </View>
-              <TouchableOpacity style={styles.intensidadButtonClear} onPress={()=> {setIntensidad(''), setActividad(''), setDuracion(''), setCaloriasQuemadas(0)}}>
+              <TouchableOpacity style={styles.intensidadButtonClear} onPress={agregarActividad}>
+                <Text style={styles.intensidadText}>Añadir actividad</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.intensidadButtonClear} onPress={()=> {setIntensidad(''), setActividad(''), setDuracion(''), setCaloriasQuemadas(0), setActividades([])}}>
                 <Text style={styles.intensidadText} >Clear</Text>
               </TouchableOpacity>
+            </ScrollView>
             </Animated.View>
 
           </TouchableOpacity>
@@ -673,7 +810,8 @@ const styles = StyleSheet.create({
   waterContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: 10,
+    marginVertical: 0,
+    marginTop: -10
   },
   cupWrapper: {
     marginHorizontal: 4,
@@ -810,6 +948,35 @@ const styles = StyleSheet.create({
   intensidadTextSelected: {
     color: '#fff',
   },
+  caloriasContainerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    marginBottom: 20,
+  },
+
+  caloriasEjercicioContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  innerCircleSmall: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  ejercicioTexto: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+
+  ejercicioLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+
 
 
 });
