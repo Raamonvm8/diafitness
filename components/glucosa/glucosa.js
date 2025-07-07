@@ -48,7 +48,7 @@ export default function Glucosa() {
           const data = doc.data();
           if (data.userId !== user.uid) return null;
   
-          const fechaFormateada = moment(data.fecha).format("DD/MM/YYYY");
+          const fechaFormateada = moment(data.fecha).format("DD-MMMM");
   
           return {
             id: doc.id,
@@ -410,8 +410,8 @@ export default function Glucosa() {
             <View style={styles.filaHeader}>
               <Text style={styles.celdaHeader}>Día</Text>
               <Text style={styles.celdaHeader}>Hora</Text>
-              <Text style={styles.celdaHeader}>Nivel (mg/dL)</Text>
-              <Text style={styles.celdaHeader}>Notas</Text>
+              <Text style={styles.celdaHeader}>mg/dL</Text>
+              <Text style={styles.celdaHeaderNotas}>Notas</Text>
             </View>
             <ScrollView style={styles.scrollTabla} nestedScrollEnabled={true}>
               {datosGlucosa?.map((item, index) => (
@@ -419,7 +419,7 @@ export default function Glucosa() {
                   <Text style={styles.celda}>{item.fecha}</Text>
                   <Text style={styles.celda}>{item.hora}</Text>
                   <Text style={styles.celda}>{item.nivel}</Text>
-                  <Text style={styles.celda}>{item.nota}</Text>
+                  <Text style={styles.celdaNotas}>{item.nota}</Text>
                 </View>
               ))}
             </ScrollView>
@@ -452,7 +452,9 @@ const styles = StyleSheet.create({
   fila: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#ccc", padding: 8 },
 
   celdaHeader: { flex: 1, fontWeight: "bold", color: "#FFFFFF", textAlign: "center" },
+  celdaHeaderNotas: {fontWeight: "bold", color: "#FFFFFF", textAlign: "center", width: '40%'},
   celda: { flex: 1, textAlign: "center", color: "#2F5D8C" },
+  celdaNotas: {textAlign: "center", color: "#2F5D8C", width: '40%' },
 
   grafica: { marginTop: 20, borderRadius: 10 },
   filtrosContainer: { flexDirection: "row", justifyContent: "center", marginTop: 10, marginBottom:10 },
