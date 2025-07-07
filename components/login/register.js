@@ -1,191 +1,248 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Button, ActivityIndicator, Platform } from 'react-native';
-import { FIREBASE_AUTH, FIREBASE_DB } from '../../FirebaseConfig';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useNavigation } from '@react-navigation/native';
-import { setDoc, doc } from 'firebase/firestore';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ActivityIndicator,
+  Platform,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import moment from 'moment';
-
-
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { setDoc, doc } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
+import { FIREBASE_AUTH, FIREBASE_DB } from '../../FirebaseConfig';
 
 export default function Register() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [peso, setPeso] = useState(null);
-    const [altura, setAltura] = useState(null);
-    const [género, setGénero] = useState('');
-    const [fechaNacimiento, setFechaNacimiento] = useState(null);
-    const [showPicker, setShowPicker] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [peso, setPeso] = useState('');
+  const [altura, setAltura] = useState('');
+  const [género, setGénero] = useState('');
+  const [fechaNacimiento, setFechaNacimiento] = useState(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errores, setErrores] = useState({});
+  const navigation = useNavigation();
+  const auth = FIREBASE_AUTH;
 
-    const [loading, setLoading] = useState(false);
+  const onChange = (event, selectedDate) => {
+    setShowPicker(false);
+    if (selectedDate) {
+      const dia = selectedDate.getDate().toString().padStart(2, '0');
+      const mes = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const año = selectedDate.getFullYear();
+      setFechaNacimiento(`${dia}/${mes}/${año}`);
+    }
+  };
 
-    const [errores, setErrores] = useState({});
-    const auth = FIREBASE_AUTH;
-    const navigation = useNavigation();
+  const handleRegister = async () => {
+    setLoading(true);
+    setErrores({});
 
-    const onChange = (event, selectedDate) => {
-        setShowPicker(false);
-        if (selectedDate) {
-            const dia = selectedDate.getDate().toString().padStart(2, '0');
-            const mes = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-            const año = selectedDate.getFullYear();
-            const fechaFormateada = `${dia}/${mes}/${año}`;
-            setFechaNacimiento(fechaFormateada); 
-        }
-    };
+    const nuevosErrores = {};
 
-    const handleRegister = async () => {
-        setLoading(true);
-        setErrores({});
+    const pesoNum = parseFloat(peso);
+    const alturaNum = parseFloat(altura);
 
-        const nuevosErrores = {};
+    if (!peso) nuevosErrores.peso = 'Peso incompleto';
+    else if (pesoNum < 11 || pesoNum > 400) nuevosErrores.peso = 'Peso incorrecto (Kg)';
 
-        if (!peso) {
-            nuevosErrores.peso='Peso incompleto';
-        }else if (peso < 11 || peso > 400) {
-            nuevosErrores.peso = 'Peso incorrecto (Kg)';
-        }
-        if (género!=='Masculino' && género!=='Femenino') {
-            nuevosErrores.género='Género incompleto';
-        }
-        if (!fechaNacimiento) {
-            nuevosErrores.fechaNacimiento='Fecha Nacimiento incompleta';
-        }
+    if (!altura) nuevosErrores.altura = 'Altura incompleta';
+    else if (alturaNum < 0.5 || alturaNum > 2.5) nuevosErrores.altura = 'Altura incorrecta (m)';
 
-        if (!altura) {
-            nuevosErrores.altura = 'Altura incompleta';
-        }else if(altura < 0.5 || altura > 2.5){
-            nuevosErrores.altura = 'Altura incorrecta (metros)';
-        }
+    if (!género) nuevosErrores.género = 'Seleccione un género';
 
-        if (name.trim().split(/\s+/).length < 2) {
-            nuevosErrores.nombre = 'Nombre incompleto';
-        }
+    if (!fechaNacimiento) nuevosErrores.fechaNacimiento = 'Fecha de nacimiento incompleta';
 
-        if (!email) {
-            nuevosErrores.email = 'Email incompleto';
-        }else if (!email.includes('@')) {
-            nuevosErrores.email = 'El email no es válido';
-        }
+    if (name.trim().split(/\s+/).length < 2) nuevosErrores.nombre = 'Nombre incompleto';
 
-        if (!password) {
-            nuevosErrores.password = 'Contraseña incompleta';
-        }else if (password.length < 6) {
-            nuevosErrores.password = 'La contraseña debe tener al menos 6 caracteres';
-        }
+    if (!email) nuevosErrores.email = 'Email incompleto';
+    else if (!email.includes('@')) nuevosErrores.email = 'Email no válido';
 
-        if (Object.keys(nuevosErrores).length > 0) {
-            setErrores(nuevosErrores);
-            setLoading(false);
-            return; 
-        }
+    if (!password) nuevosErrores.password = 'Contraseña incompleta';
+    else if (password.length < 6) nuevosErrores.password = 'Mínimo 6 caracteres';
 
-        try {
-            const response = await createUserWithEmailAndPassword(auth, email, password);
-            const user = response.user;
+    if (Object.keys(nuevosErrores).length > 0) {
+      setErrores(nuevosErrores);
+      setLoading(false);
+      return;
+    }
 
-            await setDoc(doc(FIREBASE_DB, 'users', user.uid), {
-                nombre: name,
-                email: email,
-                altura: altura,
-                peso: peso,
-                género: género,
-                nacimiento: fechaNacimiento,
-                creado: new Date(),
-            });
+    try {
+      const response = await createUserWithEmailAndPassword(auth, email, password);
+      const user = response.user;
 
+      await setDoc(doc(FIREBASE_DB, 'users', user.uid), {
+        nombre: name,
+        email,
+        altura: alturaNum,
+        peso: pesoNum,
+        género,
+        nacimiento: fechaNacimiento,
+        creado: new Date(),
+      });
 
-            console.log('User created:', response);
-            navigation.replace('HomePage'); 
-        } catch (error) {
-            const nuevosErrores = {};
-            if (error.code === 'auth/invalid-email') {
-                nuevosErrores.email = 'El email no es válido';
-            } else if (error.code === 'auth/email-already-in-use') {
-                nuevosErrores.email = 'Este email ya está en uso';
-            }
-            if (error.code === 'auth/weak-password') {
-                nuevosErrores.password = 'La contraseña debe tener al menos 6 caracteres';
-            }
+      navigation.replace('HomePage');
+    } catch (error) {
+      const nuevosErrores = {};
+      if (error.code === 'auth/invalid-email') nuevosErrores.email = 'Email no válido';
+      else if (error.code === 'auth/email-already-in-use') nuevosErrores.email = 'Email ya registrado';
+      if (error.code === 'auth/weak-password') nuevosErrores.password = 'Contraseña débil';
+      setErrores(nuevosErrores);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            setErrores(nuevosErrores);
-            console.error('Register error:', error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Registro</Text>
 
+      <TextInput
+        style={[styles.input, errores.nombre && styles.inputError]}
+        placeholder="Nombre & Apellido"
+        value={name}
+        onChangeText={setName}
+      />
+      {errores.nombre && <Text style={styles.textoError}>{errores.nombre}</Text>}
 
-    return (
-        <View style={styles.container}>
-            <TextInput placeholder="Nombre & Apellido" style={[styles.input, errores.nombre && styles.inputError]} value={name} onChangeText={setName} />
-            {errores.nombre && <Text style={styles.textoError}>{errores.nombre}</Text>}
-            <TextInput placeholder="Altura 'm'" style={[styles.input, errores.altura && styles.inputError]} value={altura} onChangeText={setAltura} />
-            {errores.altura && <Text style={styles.textoError}>{errores.altura}</Text>}
-            <TextInput placeholder="Peso 'Kg'" style={[styles.input, errores.peso && styles.inputError]} value={peso} onChangeText={setPeso} />
-            {errores.peso && <Text style={styles.textoError}>{errores.peso}</Text>}
-            <Picker selectedValue={género} style={[styles.picker, errores.género && styles.inputError]} onValueChange={(itemValue) => setGénero(itemValue)} >
-                <Picker.Item label="Seleccione su género..." value="" />
-                <Picker.Item label="Masculino" value="Masculino" />
-                <Picker.Item label="Femenino" value="Femenino" />
-            </Picker>
-            {errores.género && <Text style={styles.textoError}>{errores.género}</Text>}
-            <View>
-                <Button
-                    title={fechaNacimiento ? fechaNacimiento : "Seleccionar fecha de nacimiento"}
-                    onPress={() => setShowPicker(true)}
-                />
-                {showPicker && (
-                    <DateTimePicker
-                    value={new Date()} 
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    maximumDate={new Date()}
-                    onChange={onChange}
-                    />
-                )}
-                {errores.fechaNacimiento && (
-                    <Text style={styles.textoError}>{errores.fechaNacimiento}</Text>
-                )}
-            </View>
-            <TextInput placeholder="Email" style={[styles.input, errores.email && styles.inputError]} value={email} onChangeText={setEmail} />
-            {errores.email && <Text style={styles.textoError}>{errores.email}</Text>}
-            <TextInput placeholder="Contraseña" style={styles.input} value={password} onChangeText={setPassword} secureTextEntry />
-            {errores.password && <Text style={styles.textoError}>{errores.password}</Text>}
-            {loading ? <ActivityIndicator /> : <Button title="Register" onPress={handleRegister} />}
-        </View>
-    );
+      <TextInput
+        style={[styles.input, errores.altura && styles.inputError]}
+        placeholder="Altura (m)"
+        value={altura}
+        onChangeText={setAltura}
+        keyboardType="decimal-pad"
+      />
+      {errores.altura && <Text style={styles.textoError}>{errores.altura}</Text>}
+
+      <TextInput
+        style={[styles.input, errores.peso && styles.inputError]}
+        placeholder="Peso (Kg)"
+        value={peso}
+        onChangeText={setPeso}
+        keyboardType="decimal-pad"
+      />
+      {errores.peso && <Text style={styles.textoError}>{errores.peso}</Text>}
+
+      <View style={[styles.pickerWrapper, errores.género && styles.inputError]}>
+        <Picker
+          selectedValue={género}
+          onValueChange={(itemValue) => setGénero(itemValue)}>
+          <Picker.Item label="Seleccione su género..." value="" />
+          <Picker.Item label="Masculino" value="Masculino" />
+          <Picker.Item label="Femenino" value="Femenino" />
+        </Picker>
+      </View>
+      {errores.género && <Text style={styles.textoError}>{errores.género}</Text>}
+
+      <TouchableOpacity style={styles.dateButton} onPress={() => setShowPicker(!showPicker)}>
+        <Text style={styles.dateButtonText}>
+          {fechaNacimiento ? fechaNacimiento : 'Seleccionar fecha de nacimiento'}
+        </Text>
+      </TouchableOpacity>
+      {errores.fechaNacimiento && <Text style={styles.textoError}>{errores.fechaNacimiento}</Text>}
+
+      {showPicker && (
+        <DateTimePicker
+          value={new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          maximumDate={new Date()}
+          onChange={onChange}
+        />
+      )}
+
+      <TextInput
+        style={[styles.input, errores.email && styles.inputError]}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      {errores.email && <Text style={styles.textoError}>{errores.email}</Text>}
+
+      <TextInput
+        style={[styles.input, errores.password && styles.inputError]}
+        placeholder="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+      {errores.password && <Text style={styles.textoError}>{errores.password}</Text>}
+
+      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Registrar</Text>}
+      </TouchableOpacity>
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        padding: 20,
-        flex: 1,
-        justifyContent: 'center',
-        backgroundColor: '#E0F0FF',
-    },
-    input: {
-        marginBottom: 10,
-        height: 50,
-        borderWidth: 1,
-        padding: 10,
-        backgroundColor: '#fff',
-        borderRadius: 5,
-    },
-    picker: {
-        marginBottom: 10,
-        height: 55,
-        padding: 18,
-        backgroundColor: '#fff',
-    },
-    textoError: {
-        color: 'red',
-        marginBottom: 10,
-    },
-    inputError: {
-        borderColor: 'red',
-    },
+  container: {
+    padding: 20,
+    backgroundColor: '#E0F0FF',
+    marginBottom: -90
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    alignSelf: 'center',
+  },
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  inputError: {
+    borderColor: 'red',
+  },
+  textoError: {
+    color: 'red',
+    marginBottom: 10,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderRadius: 5,
+    borderColor: '#ccc',
+    marginBottom: 10,
+    backgroundColor: '#fff',
+  },
+  dateButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#2F5D8C',
+    padding: 12,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  dateButtonText: {
+    color: '#2F5D8C',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: '#2F5D8C',
+    paddingVertical: 14,
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
 });
