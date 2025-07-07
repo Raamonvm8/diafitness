@@ -14,7 +14,7 @@ import Fondo from '../fondo';
 
 export default function Perfil() {
   const [usuario, setUsuario] = useState(null);
-  const [objetivos, setObjetivos] = useState([]);
+  const [objetivos, setObjetivos] = useState({ personales: [], fitness: [] });
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -46,33 +46,38 @@ export default function Perfil() {
   );
 
   const cargarObjetivos = async () => {
-  const auth = getAuth();
-  const user = auth.currentUser;
+    const auth = getAuth();
+    const user = auth.currentUser;
 
-  if (!user) {
-    console.log("Usuario no autenticado");
-    return;
-  }
-
-  const mesActual = moment().format('MMMM');
-  const refObjetivos = doc(FIREBASE_DB, 'Objetivos Mensuales', `${user.uid}_${mesActual}`);
-  console.log("Buscando objetivos en:", `${user.uid}_${mesActual}`);
-
-  try {
-    const getRefDoc = await getDoc(refObjetivos);
-
-    if (getRefDoc.exists()) {
-      const data = getRefDoc.data();
-      console.log("Datos del documento:", data);
-      setObjetivos(data.objetivos || []);
-    } else {
-      console.log('No se encontraron objetivos del usuario para este mes.');
-      setObjetivos([]);
+    if (!user) {
+      console.log("Usuario no autenticado");
+      return;
     }
-  } catch (error) {
-    console.error("Error al cargar objetivos:", error);
-  }
-};
+
+    const mesActual = moment().format('MM-YYYY');
+    const refObjetivos = doc(FIREBASE_DB, 'Objetivos Mensuales', `${user.uid}_${mesActual}`);
+    console.log("Buscando objetivos en:", `${user.uid}_${mesActual}`);
+
+    try {
+      const getRefDoc = await getDoc(refObjetivos);
+      
+      if (getRefDoc.exists()) {
+        const data = getRefDoc.data();
+        const objetivosData = data.objetivos_personales || {};
+        const objetivos_personales = Object.values(objetivosData).map((obj) => obj.texto);
+        console.log("Datos del documento:", data);
+        setObjetivos({
+          personales: objetivos_personales,
+          fitness: data.objetivos_fitness
+        });
+      } else {
+        console.log('No se encontraron objetivos del usuario para este mes.');
+        setObjetivos({ personales: [], fitness: [] });
+      }
+    } catch (error) {
+      console.error("Error al cargar objetivos:", error);
+    }
+  };
 
 
 
@@ -108,9 +113,9 @@ export default function Perfil() {
         </View>
       </View>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle} onPress={agregarSugerenciasComidaGlobales}>Objetivos de este mes</Text>
-        {objetivos.length > 0 ? (
-          objetivos.map((objetivo, i) => (
+        <Text style={styles.sectionTitle} >Objetivos de este mes</Text>
+        {[...objetivos.personales, ...(objetivos.fitness || [])].length > 0 ? (
+          [...objetivos.personales, ...(objetivos.fitness || [])].map((objetivo, i) => (
             <Text key={i} style={styles.infoText}>- {objetivo}</Text>
           ))
         ) : (
