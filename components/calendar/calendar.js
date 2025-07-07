@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, Modal, TextInput, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, FlatList, Modal, TextInput, ScrollView, Alert } from 'react-native';
 import { Calendar } from 'react-native-calendars';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import Header from '../header';
 import Fondo from '../fondo';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-import * as CalendarAPI from 'expo-calendar';
+import { FIREBASE_DB } from '../../FirebaseConfig';
+import { collection, addDoc, updateDoc, setDoc, doc, getDoc, query, where, getDocs } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-//import * as Permissions from 'expo-permissions';
+import * as CalendarAPI from 'expo-calendar';
 
 export default function CalendarioView() {
   const hoy = new Date().toISOString().split('T')[0];
@@ -22,6 +25,27 @@ export default function CalendarioView() {
   const [mostrarInicioPicker, setMostrarInicioPicker] = useState(false);
   const [mostrarFinPicker, setMostrarFinPicker] = useState(false);
 
+  const [objetivosPersonales, setObjetivosPersonales] = useState([]);
+  const [progresoObjetivos, setProgresoObjetivos] = useState({});
+  const [userId, setUserId] = useState(null);
+
+  const [diasCompleted, setDiasCompleted] = useState(0);
+
+
+  const fechaActual = new Date();
+  const mesActual = `${(fechaActual.getMonth() + 1).toString().padStart(2, '0')}-${fechaActual.getFullYear()}`;
+
+  useEffect(() => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      Alert.alert("Error", "No hay un usuario autenticado.");
+      return;
+    }
+
+    setUserId(user.uid);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -45,9 +69,7 @@ export default function CalendarioView() {
     }
 
     const calendars = await CalendarAPI.getCalendarsAsync(CalendarAPI.EntityTypes.EVENT);
-    const googleCalendars = calendars.filter(cal => cal.source?.name?.includes('Google'));
-
-    const calendarIds = googleCalendars.length ? googleCalendars.map(cal => cal.id) : calendars.map(cal => cal.id);
+    const calendarIds = calendars.map(cal => cal.id);
 
     const startDate = new Date(fecha + 'T00:00:00');
     const endDate = new Date(fecha + 'T23:59:59');
@@ -63,8 +85,6 @@ export default function CalendarioView() {
     })();
   }, [selectedDate]);
 
-
-
   const agregarEvento = async () => {
     if (!nuevoEvento) return;
 
@@ -75,7 +95,7 @@ export default function CalendarioView() {
       const { status } = await CalendarAPI.requestCalendarPermissionsAsync();
       if (status === 'granted') {
         const calendars = await CalendarAPI.getCalendarsAsync(CalendarAPI.EntityTypes.EVENT);
-        
+
         const defaultCalendar = calendars.find(
           cal => cal.source?.name === 'Default' || cal.source?.name === 'iCloud'
         ) || calendars[0];
@@ -103,13 +123,114 @@ export default function CalendarioView() {
     setModalVisible(false);
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) {
+        cargarObjetivosPersonales();
+        cargarProgresoObjetivos();
+      }
+    }, [userId])
+  );
+
+  const cargarObjetivosPersonales = async () => {
+    try {
+      const objetivosRef = collection(FIREBASE_DB, 'Objetivos Mensuales');
+      const q = query(objetivosRef, where('userId', '==', userId), where('mes', '==', mesActual));
+      const querySnapshot = await getDocs(q);
+      const objetivos = [];
+      console.log('Número de documentos encontrados:', querySnapshot.size);
+      console.log('Consultando objetivos para userId:', userId, 'y mes:', mesActual);
+
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log('Documento:', data);
+        if (data.objetivos_personales) {
+          objetivos.push(...data.objetivos_personales);
+        }
+      });
+      setObjetivosPersonales(objetivos);
+    } catch (error) {
+      console.error('Error al cargar objetivos personales:', error);
+    }
+  };
+
+
+  const cargarProgresoObjetivos = async () => {
+    try {
+      const docId = `${userId}_${mesActual}`;
+      const docRef = doc(FIREBASE_DB, 'Objetivos Mensuales', docId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setProgresoObjetivos(docSnap.data().progreso || {});
+      } else {
+        setProgresoObjetivos({});
+      }
+    } catch (error) {
+      console.error('Error al cargar progreso de objetivos:', error);
+    }
+  };
+
+  const manejarCambioCheckbox = async (objetivoTexto, fecha, valor) => {
+    try {
+      const docRef = doc(FIREBASE_DB, 'Objetivos Mensuales', `${userId}_${mesActual}`);
+
+      const docSnap = await getDoc(docRef);
+      let progresoActual = {};
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        progresoActual = data.progreso || {};
+      }
+
+      const nuevoProgreso = { ...progresoActual };
+
+      if (!nuevoProgreso[objetivoTexto]) {
+        nuevoProgreso[objetivoTexto] = {};
+      }
+      nuevoProgreso[objetivoTexto][fecha] = valor;
+
+      await setDoc(docRef, { progreso: nuevoProgreso }, { merge: true });
+
+      setProgresoObjetivos(nuevoProgreso);
+    } catch (error) {
+      console.error('Error al actualizar progreso de objetivo:', error);
+    }
+  };
+
+
+  const mostrarResumenMensual = async () => {
+    const objetivosCumplidos = [];
+    const objetivosIncumplidos = [];
+
+    objetivosPersonales.forEach((objetivo) => {
+      const diasCumplidos = Object.values(progresoObjetivos[objetivo.texto] || {}).filter(Boolean).length;
+      
+      if (diasCumplidos >= objetivo.dias) {
+        objetivosCumplidos.push({objetivo, diasCumplidos});
+      } else {
+        objetivosIncumplidos.push({objetivo, diasCumplidos});
+      }
+    });
+
+    return (
+      <View style={styles.resumenMensual}>
+        <Text style={styles.subtitulo}>Resumen del mes</Text>
+        {objetivosCumplidos.map((texto, index) => (
+          <Text key={index} style={styles.objetivoTextoCumplido}>- {texto.objetivo.texto} ({texto.diasCumplidos} / {texto.objetivo.dias})</Text>
+        ))}
+        {objetivosIncumplidos.map((texto, index) => (
+          <Text key={index} style={styles.objetivoTexto}>- {texto.objetivo.texto} ({texto.diasCumplidos} / {texto.objetivo.dias})</Text>
+        ))}
+      </View>
+    );
+  };
 
 
   return (
     <Fondo>
     
     <><Header />
-    <ScrollView style={styles.container}>
+    <ScrollView contentContainerStyle={{ paddingBottom: 100, minHeight: '100%' }} style={styles.container}>
 
       <Calendar
         onDayPress={marcarFecha}
@@ -193,6 +314,33 @@ export default function CalendarioView() {
           </View>
         </View>
       </Modal>
+
+      <View style={styles.seccionDia}>
+        <Text style={styles.subtitulo}>Objetivos personales del día</Text>
+        {objetivosPersonales.length > 0 ? (
+          objetivosPersonales.map((objetivo, index) => {
+            const estaMarcado = progresoObjetivos[objetivo.texto]?.[selectedDate] || false;
+
+            return (
+              <TouchableOpacity
+                key={index}
+                onPress={() => manejarCambioCheckbox(objetivo.texto, selectedDate, !estaMarcado)}
+                style={styles.checkboxContainer}
+              >
+                <View style={[styles.checkbox, estaMarcado && styles.checkboxMarcado]} />
+                <Text style={styles.checkboxLabel}>{objetivo.texto}</Text>
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <Text style={styles.noEvento}>No hay objetivos personales para este mes, ve a tu perfil y gestionalos.</Text>
+        )}
+      </View>
+
+      <View >
+        {mostrarResumenMensual()}
+      </View>
+
     </ScrollView></>
     </Fondo>
   );
@@ -203,6 +351,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#E0F0FF',
     padding: 30,
+    marginBottom: 30
   },
   titulo: {
     fontSize: 24,
@@ -293,4 +442,33 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: 'center'
   },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: '#2F5D8C',
+    marginRight: 10,
+  },
+  checkboxMarcado: {
+    backgroundColor: '#2F5D8C',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+  },
+  resumenMensual: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 20,
+  },
+  objetivoTextoCumplido: {
+    backgroundColor: 'green',
+  }
+
 });
