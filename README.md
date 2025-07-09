@@ -11,9 +11,8 @@ Aplicación móvil desarrollada como Trabajo de Fin de Grado (TFG) que permite r
 - Registro manual de niveles de glucosa (mg/dL).
 - Visualización de datos mediante gráficos:
   - Filtro por **día**, **semana** y **mes**.
-- Almacenamiento local de datos.
+- Almacenamiento de datos como autenticación, dietas, glucosa, objetivos, recetas, etc.
 - Interfaz intuitiva y accesible.
-- Posibilidad de exportar datos para el médico (opcional o futura mejora).
 
 ## Tecnologías utilizadas
 
