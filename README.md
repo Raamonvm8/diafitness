@@ -29,7 +29,7 @@ Aplicación móvil desarrollada como Trabajo de Fin de Grado (TFG) que permite r
 ### Instalación y ejecución
 
 
-git clone [https://github.com/tuusuario/app-glucosa.git](https://github.com/Raamonvm8/diafitness.git)
+git clone https://github.com/Raamonvm8/diafitness.git
 cd diafitness
 npm install
 
